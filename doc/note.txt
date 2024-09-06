@@ -1,0 +1,11 @@
+libauxaction:
+1. sudo chmod 777 /usr/lib
+2. cp libauxaction.so /usr/lib
+3. sudo chmod 755 /usr/lib
+
+return_code:
+1. sudo mkdir -p /home/common/header
+2. sudo chmod 777 /home/common/header
+3. cp return_code.h /home/common/header
+4. sudo chmod 755 /home/common/header
+

@@ -1,0 +1,9 @@
+# ignore log folder
+LOG/
+log/
+build/
+output/
+~/
+
+# ignore object file
+*.o
