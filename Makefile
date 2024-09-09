@@ -9,7 +9,7 @@ ifeq ($(ver), release)
 build_version: echo_release build_release
 CFLAGS = -c -O3 -D_ROLE_HOST
 OBJPATH = ./obj/release
-OUTPUT = output/release/rtc_driver	
+OUTPUT = output/release/abc_driver	
 else
 # otherwise, build debug version.
 build_version: echo_debug  mkdir_debug build_debug
@@ -66,7 +66,6 @@ HEADER_FLAGS += -I../common/header
 
 OBJS = $(OBJPATH)/main.o \
 	$(OBJPATH)/notification_pkg.o \
-	$(OBJPATH)/Mqtt_prot.o \
 	$(OBJPATH)/logger_wrapper.o \
 	$(OBJPATH)/Logger.o \
 	$(OBJPATH)/cli.o \
@@ -77,12 +76,10 @@ OBJS = $(OBJPATH)/main.o \
 	$(OBJPATH)/rc5simple.o\
 	$(OBJPATH)/iniparser.o \
 	$(OBJPATH)/dictionary.o \
-	$(OBJPATH)/BL_USBComm.o \
-	$(OBJPATH)/bl_ctrl.o \
-	$(OBJPATH)/update_sour.o \
 	$(OBJPATH)/USBComm.o \
 	$(OBJPATH)/USBComm_Driver_Linux64.o \
 	$(OBJPATH)/Msg_Prot.o \
+	$(OBJPATH)/USBComm_Abc.o \
 
 build_debug:$(OBJS)
 	$(CC) -o $(OUTPUT) $(OBJS) $(LDFLAGS)
@@ -93,13 +90,7 @@ build_release:$(OBJS)
 $(OBJPATH)/main.o: $(SOURCE_PATH)/main.cpp
 	$(CC) $(CFLAGS) $(HEADER_FLAGS) $^ -o $@
 
-$(OBJPATH)/update_sour.o: $(SOURCE_PATH)/update_sour.cpp
-	$(CC) $(CFLAGS) $(HEADER_FLAGS) $^ -o $@
-
 $(OBJPATH)/Msg_Prot.o: $(SOURCE_PATH)/Msg_Prot.cpp
-	$(CC) $(CFLAGS) $(HEADER_FLAGS) $^ -o $@
-
-$(OBJPATH)/Mqtt_prot.o: $(SOURCE_PATH)/Mqtt_prot.cpp
 	$(CC) $(CFLAGS) $(HEADER_FLAGS) $^ -o $@
 
 $(OBJPATH)/interface_to_host.o: $(SOURCE_PATH)/interface_to_host.cpp
@@ -135,9 +126,6 @@ $(OBJPATH)/HandleCmd.o: $(SOURCE_PATH)/HandleCmd.cpp
 $(OBJPATH)/httpinterface.o: $(SOURCE_PATH)/httpinterface.cpp
 	$(CC) $(CFLAGS) $(HEADER_FLAGS) $^ -o $@
 
-$(OBJPATH)/bl_ctrl.o: $(SOURCE_PATH)/bl_ctrl.cpp
-	$(CC) $(CFLAGS) $(HEADER_FLAGS) $^ -o $@
-
 $(OBJPATH)/rc5simple.o: $(SOURCE_PATH)/RC5Simple.cpp
 	$(CC) $(CFLAGS) $(HEADER_FLAGS) $^ -o $@
 
@@ -147,7 +135,7 @@ $(OBJPATH)/iniparser.o: $(SOURCE_PATH)/iniparser.cpp
 $(OBJPATH)/dictionary.o: $(SOURCE_PATH)/dictionary.cpp
 	$(CC) $(CFLAGS) $(HEADER_FLAGS) $^ -o $@
 
-$(OBJPATH)/BL_USBComm.o: $(SOURCE_PATH)/BL_USBComm.cpp
+$(OBJPATH)/USBComm_Abc.o: $(SOURCE_PATH)/USBComm_Abc.cpp
 	$(CC) $(CFLAGS) $(HEADER_FLAGS) $^ -o $@
 
 clean:

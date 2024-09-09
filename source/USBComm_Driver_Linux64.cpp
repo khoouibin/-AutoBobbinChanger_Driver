@@ -37,9 +37,9 @@
 #include <signal.h>
 #include <libusb-1.0/libusb.h>
 
-#include "USBComm.h"
+#include "USBComm_Abc.h"
 #include "USBComm_Driver.h"
-
+#include "USBComm.h"
 // -----------------
 // Internal Define
 // -----------------

@@ -569,7 +569,7 @@ static int USBComm_Init_USB(int iRtcId)
 	iReturn = USBComm_Driver_Find_RTC_Device(iRtcId, &str_prodct, &str_manufature);
 	if (iReturn != USBCOMM_SUCCESS)
 	{
-		sprintf(str_usblog, "%s[%d]cannot find UsbDevice in list", __func__, __LINE__);
+		sprintf(str_usblog, "%s[%d]cannot find usb_device in list", __func__, __LINE__);
 		string tmp_string(str_usblog);
 		goDriverLogger.Log("error", tmp_string);
 		return iReturn;
