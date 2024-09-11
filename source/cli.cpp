@@ -192,6 +192,26 @@ void CommandLineInterface()
                 }
             }
         }
+        else if (cmd == "reset")
+        {
+            if (v.size() < 2)
+            {
+                usb_message_reset(0x01);
+                continue;
+            }
+            else
+            {
+                try
+                {
+                    int delay_time = std::stoi(v[1]);
+                    usb_message_reset(01,(unsigned short)delay_time);
+                }
+                catch (const std::exception &e)
+                {
+                    std::cout << "echo message, exception:" << e.what() << '\n';
+                }
+            }
+        }
         else if (cmd == "tcp")
         {
             int res;

@@ -16,6 +16,7 @@ USB_Transaction_State_t TxTransState;
 USB_Transaction_State_t RxTransState;
 
 usb_msg_echo_fbk_t g_msg_echo_fbk;
+usb_msg_reset_fbk_t g_msg_reset_fbk;
 
 char str_log[256];
 char libusb_error_string[64];
@@ -426,8 +427,8 @@ void *USBComm_Task_Service_Abc(void *p)
     USB_TaskResp_msg_t* pTask_msg;
     usb_msg_u8 msg[MESSAGE_MAX];
 
-	usb_msg_echo_fbk_t* p_echofbk;
-	p_echofbk = &g_msg_echo_fbk;
+	usb_msg_echo_fbk_t* p_echofbk= &g_msg_echo_fbk;
+	usb_msg_reset_fbk_t* p_resetfbk= &g_msg_reset_fbk;
 
 	unsigned char msg_length;
     bool new_msg;
@@ -456,12 +457,18 @@ void *USBComm_Task_Service_Abc(void *p)
 				new_msg = USB_Msg_Parser(&Task_msg);
 				if (new_msg ==true)
 				{
-					if (Task_msg.cmd_id_rep==RespPos_Echo)
+					if (Task_msg.cmd_id_rep==RespPositive_Echo)
 					{
 						p_echofbk->echo_fbk.cmd_id_rep =Task_msg.cmd_id_rep;
 						p_echofbk->echo_fbk.sub_func =Task_msg.sub_func;
 						memcpy(p_echofbk->echo_fbk.data, pTask_msg->data, 60);
 						p_echofbk->echo_fbk_wake.set();
+					}
+					else if (Task_msg.cmd_id_rep==RespPositive_Reset)
+					{
+						p_resetfbk->reset_fbk.cmd_id =Task_msg.cmd_id_rep;
+						p_resetfbk->reset_fbk.sub_func =Task_msg.sub_func;
+						p_resetfbk->reset_fbk_wake.set();
 					}
 				}
 				res = 0;
@@ -630,21 +637,20 @@ int usb_message_echo(unsigned char sub_func)
 	msg_echo.cmd_id = Cmd_Echo;
 	msg_echo.sub_func = sub_func;
 	memset(msg_echo.data, 0, sizeof(msg_echo.data));
-	usb_msg_echo_fbk_t* p_echofbk;
-	p_echofbk = &g_msg_echo_fbk;
+	usb_msg_echo_fbk_t* p_echofbk=&g_msg_echo_fbk;;
 	unsigned long t_start = GetCurrentTime_us();
 	p_echofbk->echo_fbk_wake.reset();
-	USB_Msg_To_TxBulkBuffer((ptr_usb_msg_u8)&msg_echo, 8);
+	USB_Msg_To_TxBulkBuffer((ptr_usb_msg_u8)&msg_echo, sizeof(usb_msg_echo_t));
 	while (1)
 	{
 		res_wake = p_echofbk->echo_fbk_wake.tryWait(nop_trywait_TIMEOUT);
 		if (res_wake == 1)
 		{
-			sprintf(str_log, "%s[%d] ResponseId:0x%02x, SubFunction:0x%02x, data:%s", 
-				__func__, __LINE__, 
-				p_echofbk->echo_fbk.cmd_id_rep,
-				p_echofbk->echo_fbk.sub_func,
-				p_echofbk->echo_fbk.data);
+			sprintf(str_log, "%s[%d] ResponseId=0x%02x, SubFunction=0x%02x, response msg=%s",
+					__func__, __LINE__,
+					p_echofbk->echo_fbk.cmd_id_rep,
+					p_echofbk->echo_fbk.sub_func,
+					p_echofbk->echo_fbk.data);
 			string tmp_string(str_log);
 			goDriverLogger.Log("info", tmp_string);
 			res = 0;
@@ -659,6 +665,44 @@ int usb_message_echo(unsigned char sub_func)
 		break;
 	}
 	printf("echo message, escape:%ld ms. \n", (GetCurrentTime_us() - t_start)/1000);
+	return res;
+}
+
+int usb_message_reset(unsigned char sub_func, unsigned int delay_time)
+{
+	int res;
+	int res_wake;
+	int nop_trywait_TIMEOUT = 50;
+	usb_msg_reset_t msg_reset;
+	msg_reset.cmd_id = Cmd_Reset;
+	msg_reset.sub_func = sub_func;
+	msg_reset.delay_time = delay_time;
+	usb_msg_reset_fbk_t *p_resetfbk = &g_msg_reset_fbk;
+	unsigned long t_start = GetCurrentTime_us();
+	USB_Msg_To_TxBulkBuffer((ptr_usb_msg_u8)&msg_reset, sizeof(usb_msg_reset_t));
+	while (1)
+	{
+		res_wake = p_resetfbk->reset_fbk_wake.tryWait(nop_trywait_TIMEOUT);
+		if (res_wake == 1)
+		{
+			sprintf(str_log, "%s[%d] ResponseId:0x%02x, SubFunction:0x%02x",
+					__func__, __LINE__,
+					p_resetfbk->reset_fbk.cmd_id,
+					p_resetfbk->reset_fbk.sub_func);
+			string tmp_string(str_log);
+			goDriverLogger.Log("info", tmp_string);
+			res = 0;
+		}
+		else
+		{
+			sprintf(str_log, "%s[%d] time out", __func__, __LINE__);
+			string tmp_string(str_log);
+			goDriverLogger.Log("error", tmp_string);
+			res = -1;
+		}
+		break;
+	}
+	printf("reset message, escape:%ld ms. \n", (GetCurrentTime_us() - t_start) / 1000);
 	return res;
 }
 
@@ -679,8 +723,8 @@ bool USB_Msg_Parser(USB_TaskResp_msg_t *task_msg)
 		if (p_taskmsg->cmd_id_rep == RespNeg)
 		{
 			sprintf(str_log, "%s[%d] CmdId:0x%02x NegCode:0x%02x, msg:%s",
-					__func__, __LINE__, 
-					p_negresp->cmd_id, 
+					__func__, __LINE__,
+					p_negresp->cmd_id,
 					p_negresp->neg_code,
 					p_negresp->data);
 			string tmp_string(str_log);
@@ -688,9 +732,14 @@ bool USB_Msg_Parser(USB_TaskResp_msg_t *task_msg)
 		}
 		else
 		{
-			if (p_taskmsg->cmd_id_rep == RespPos_Echo)
+			if (p_taskmsg->cmd_id_rep == RespPositive_Echo)
 			{
 				memcpy(task_msg, (usb_msg_u8 *)msg, MESSAGE_MAX);
+				b_new_msg = true;
+			}
+			else if (p_taskmsg->cmd_id_rep == RespPositive_Reset)
+			{
+				memcpy(task_msg, (usb_msg_u8 *)msg, sizeof(usb_msg_reset_t));
 				b_new_msg = true;
 			}
 		}

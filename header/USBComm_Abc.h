@@ -55,12 +55,14 @@ enum UsbDevice
 enum Protocol_Command
 {
 	Cmd_Echo = 0x00,
+	Cmd_Reset = 0x01,
 	Cmd_MAX,
 };
 
 enum Protocol_PositiveResponse
 {
-	RespPos_Echo = 0x40,
+	RespPositive_Echo = 0x40,
+	RespPositive_Reset = 0x41,
 };
 
 enum Protocol_NegativeResponse
@@ -201,6 +203,19 @@ typedef struct
 	Poco::Event echo_fbk_wake;
 } usb_msg_echo_fbk_t;
 
+typedef struct
+{
+	unsigned char cmd_id;
+	unsigned char sub_func;
+	unsigned short  delay_time;
+} usb_msg_reset_t;
+
+typedef struct
+{
+	usb_msg_reset_t reset_fbk;
+	Poco::Event reset_fbk_wake;
+} usb_msg_reset_fbk_t;
+
 int USBComm_Driver_GetDeviceList(int *suitable_device, int en_print);
 int USBComm_Driver_SelectTargetDevice(unsigned short idVendor, unsigned short idProduct);
 int USBComm_Driver_getTargetDevice(void);
@@ -234,6 +249,6 @@ char USB_Msg_To_TxBulkBuffer(ptr_usb_msg_u8 send_msg, unsigned char msg_size);
 
 unsigned long GetCurrentTime_us(void);
 int usb_message_echo(unsigned char sub_func);
-
+int usb_message_reset(unsigned char sub_func, unsigned int delay_time = 500);
 
 #endif
