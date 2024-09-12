@@ -787,10 +787,6 @@ int usb_set_profile_01(RTC_Profile_01_t *set_profile_01)
 	memcpy(usb_profile_msg.data + sizeof(set_profile_01->profile_01_01) + sizeof(set_profile_01->profile_01_02) + sizeof(set_profile_01->profile_01_03), (ptr_usb_msg_u8)&set_profile_01->profile_01_04, sizeof(set_profile_01->profile_01_04));
 	memcpy(usb_profile_msg.data + sizeof(set_profile_01->profile_01_01) + sizeof(set_profile_01->profile_01_02) + sizeof(set_profile_01->profile_01_03) + sizeof(set_profile_01->profile_01_04), (ptr_usb_msg_u8)&set_profile_01->profile_01_05, sizeof(set_profile_01->profile_01_05));
 	memcpy(usb_profile_msg.data + sizeof(set_profile_01->profile_01_01) + sizeof(set_profile_01->profile_01_02) + sizeof(set_profile_01->profile_01_03) + sizeof(set_profile_01->profile_01_04) + sizeof(set_profile_01->profile_01_05), (ptr_usb_msg_u8)&set_profile_01->profile_01_06, sizeof(set_profile_01->profile_01_06));
-	// usb_msg_u8* p_u8=(usb_msg_u8*)&usb_profile_msg;
-	// for(int i = 0;i<sizeof(usb_msg_profile_t);i++)
-	// 	printf("p_u8[%d]=0x%02x\n",i,p_u8[i]);
-
 	res = usb_message_profile_set(01, &usb_profile_msg);
 	return res;
 }
@@ -807,10 +803,6 @@ int usb_message_profile_set(unsigned char profile_number, usb_msg_profile_t* pro
 	usb_msg_profile_fbk_t *p_profilefbk = &g_msg_profile_fbk;
 	unsigned long t_start = GetCurrentTime_us();
 	USB_Msg_To_TxBulkBuffer((ptr_usb_msg_u8)profile_msg, sizeof(usb_msg_profile_t));
-
-	// usb_msg_u8 *p_u8 = (usb_msg_u8 *)profile_msg;
-	// for (int i = 0; i < sizeof(usb_msg_profile_t); i++)
-	// 	printf("p_prof-msg[%d]=0x%02x\n", i, p_u8[i]);
 
 	while (1)
 	{
