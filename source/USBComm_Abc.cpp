@@ -11,12 +11,14 @@
 //#include "bl_ctrl.h"
 #include "Msg_Prot.h"
 #include "interface_driver_to_ui.h"
+#include <arpa/inet.h>
 
 USB_Transaction_State_t TxTransState;
 USB_Transaction_State_t RxTransState;
 
 usb_msg_echo_fbk_t g_msg_echo_fbk;
 usb_msg_reset_fbk_t g_msg_reset_fbk;
+usb_msg_profile_fbk_t g_msg_profile_fbk;
 
 char str_log[256];
 char libusb_error_string[64];
@@ -429,6 +431,7 @@ void *USBComm_Task_Service_Abc(void *p)
 
 	usb_msg_echo_fbk_t* p_echofbk= &g_msg_echo_fbk;
 	usb_msg_reset_fbk_t* p_resetfbk= &g_msg_reset_fbk;
+	usb_msg_profile_fbk_t* p_profilefbk = &g_msg_profile_fbk;
 
 	unsigned char msg_length;
     bool new_msg;
@@ -469,6 +472,14 @@ void *USBComm_Task_Service_Abc(void *p)
 						p_resetfbk->reset_fbk.cmd_id =Task_msg.cmd_id_rep;
 						p_resetfbk->reset_fbk.sub_func =Task_msg.sub_func;
 						p_resetfbk->reset_fbk_wake.set();
+					}
+					else if (Task_msg.cmd_id_rep==RespPositive_Profile)
+					{
+						p_profilefbk->profile_fbk.cmd_id =Task_msg.cmd_id_rep;
+						p_profilefbk->profile_fbk.sub_func =Task_msg.sub_func;
+						p_profilefbk->profile_fbk.profile_number =Task_msg.argv0;
+						memcpy(p_profilefbk->profile_fbk.data, pTask_msg->data, MSG_DATA_SIZE);
+						p_profilefbk->profile_fbk_wake.set();
 					}
 				}
 				res = 0;
@@ -636,6 +647,8 @@ int usb_message_echo(unsigned char sub_func)
 	usb_msg_echo_t msg_echo;
 	msg_echo.cmd_id = Cmd_Echo;
 	msg_echo.sub_func = sub_func;
+	msg_echo.data[0] = Dummy;
+	msg_echo.data[1] = Dummy;
 	memset(msg_echo.data, 0, sizeof(msg_echo.data));
 	usb_msg_echo_fbk_t* p_echofbk=&g_msg_echo_fbk;;
 	unsigned long t_start = GetCurrentTime_us();
@@ -706,6 +719,118 @@ int usb_message_reset(unsigned char sub_func, unsigned int delay_time)
 	return res;
 }
 
+int usb_get_profile_01(RTC_Profile_01_t* ret_profile_01)
+{
+	int res = 0;
+	usb_msg_profile_t usb_profile_msg;
+	res = usb_message_profile_get(01, &usb_profile_msg);
+	if (res == 0)
+	{
+		memcpy(&ret_profile_01->profile_01_01, (ptr_usb_msg_u8)&usb_profile_msg.data, sizeof(ret_profile_01->profile_01_01));
+		memcpy(&ret_profile_01->profile_01_02, (ptr_usb_msg_u8)&usb_profile_msg.data + sizeof(ret_profile_01->profile_01_01), sizeof(ret_profile_01->profile_01_02));
+		memcpy(&ret_profile_01->profile_01_03, (ptr_usb_msg_u8)&usb_profile_msg.data + sizeof(ret_profile_01->profile_01_01) + sizeof(ret_profile_01->profile_01_02), sizeof(ret_profile_01->profile_01_03));
+		memcpy(&ret_profile_01->profile_01_04, (ptr_usb_msg_u8)&usb_profile_msg.data + sizeof(ret_profile_01->profile_01_01) + sizeof(ret_profile_01->profile_01_02) + sizeof(ret_profile_01->profile_01_03), sizeof(ret_profile_01->profile_01_04));
+		memcpy(&ret_profile_01->profile_01_05, (ptr_usb_msg_u8)&usb_profile_msg.data + sizeof(ret_profile_01->profile_01_01) + sizeof(ret_profile_01->profile_01_02) + sizeof(ret_profile_01->profile_01_03) + sizeof(ret_profile_01->profile_01_04), sizeof(ret_profile_01->profile_01_05));
+		memcpy(&ret_profile_01->profile_01_06, (ptr_usb_msg_u8)&usb_profile_msg.data + sizeof(ret_profile_01->profile_01_01) + sizeof(ret_profile_01->profile_01_02) + sizeof(ret_profile_01->profile_01_03) + sizeof(ret_profile_01->profile_01_04) + sizeof(ret_profile_01->profile_01_05), sizeof(ret_profile_01->profile_01_06));
+	}
+	return res;
+}
+
+int usb_message_profile_get(unsigned char profile_number, usb_msg_profile_t* profile_msg)
+{
+	int res;
+	int res_wake;
+	int nop_trywait_TIMEOUT = 50;
+	usb_msg_profile_t msg_profile;
+	msg_profile.cmd_id = Cmd_Profile;
+	msg_profile.sub_func = SubFunc_profile_get;
+	msg_profile.profile_number = profile_number;
+	msg_profile.ignore = Dummy;
+	usb_msg_profile_fbk_t *p_profilefbk = &g_msg_profile_fbk;
+	unsigned long t_start = GetCurrentTime_us();
+	USB_Msg_To_TxBulkBuffer((ptr_usb_msg_u8)&msg_profile, 4);
+	while (1)
+	{
+		res_wake = p_profilefbk->profile_fbk_wake.tryWait(nop_trywait_TIMEOUT);
+		if (res_wake == 1)
+		{
+			sprintf(str_log, "%s[%d] RespId:0x%02x, SubFunction:0x%02x,prof_num:%d",
+					__func__, __LINE__,
+					p_profilefbk->profile_fbk.cmd_id,
+					p_profilefbk->profile_fbk.sub_func,
+					p_profilefbk->profile_fbk.profile_number);
+			string tmp_string(str_log);
+			goDriverLogger.Log("info", tmp_string);
+			memcpy(profile_msg, (ptr_usb_msg_u8)&p_profilefbk->profile_fbk,sizeof(usb_msg_profile_t));
+			res = 0;
+		}
+		else
+		{
+			sprintf(str_log, "%s[%d] time out", __func__, __LINE__);
+			string tmp_string(str_log);
+			goDriverLogger.Log("error", tmp_string);
+			res = -1;
+		}
+		break;
+	}
+	printf("get profile message, escape:%ld ms. \n", (GetCurrentTime_us() - t_start) / 1000);
+	return res;
+}
+
+int usb_set_profile_01(RTC_Profile_01_t set_profile_01)
+{
+	int res = 0;
+	usb_msg_profile_t usb_profile_msg;
+	memcpy(&usb_profile_msg.data + 0, (ptr_usb_msg_u8)&set_profile_01.profile_01_01, sizeof(set_profile_01.profile_01_01));
+	memcpy(&usb_profile_msg.data + sizeof(set_profile_01.profile_01_01), (ptr_usb_msg_u8)&set_profile_01.profile_01_02, sizeof(set_profile_01.profile_01_02));
+	memcpy(&usb_profile_msg.data + sizeof(set_profile_01.profile_01_01) + sizeof(set_profile_01.profile_01_02), (ptr_usb_msg_u8)&set_profile_01.profile_01_03, sizeof(set_profile_01.profile_01_03));
+	memcpy(&usb_profile_msg.data + sizeof(set_profile_01.profile_01_01) + sizeof(set_profile_01.profile_01_02) + sizeof(set_profile_01.profile_01_03), (ptr_usb_msg_u8)&set_profile_01.profile_01_04, sizeof(set_profile_01.profile_01_04));
+	memcpy(&usb_profile_msg.data + sizeof(set_profile_01.profile_01_01) + sizeof(set_profile_01.profile_01_02) + sizeof(set_profile_01.profile_01_03) + sizeof(set_profile_01.profile_01_04), (ptr_usb_msg_u8)&set_profile_01.profile_01_05, sizeof(set_profile_01.profile_01_05));
+	memcpy(&usb_profile_msg.data + sizeof(set_profile_01.profile_01_01) + sizeof(set_profile_01.profile_01_02) + sizeof(set_profile_01.profile_01_03) + sizeof(set_profile_01.profile_01_04) + sizeof(set_profile_01.profile_01_05), (ptr_usb_msg_u8)&set_profile_01.profile_01_06, sizeof(set_profile_01.profile_01_06));
+	res = usb_message_profile_set(01, usb_profile_msg);
+	return res;
+}
+
+int usb_message_profile_set(unsigned char profile_number, usb_msg_profile_t profile_msg)
+{
+	int res;
+	int res_wake;
+	int nop_trywait_TIMEOUT = 50;
+	//usb_msg_profile_t msg_profile;
+	profile_msg.cmd_id = Cmd_Profile;
+	profile_msg.sub_func = SubFunc_profile_set;
+	profile_msg.profile_number = profile_number;
+	profile_msg.ignore = Dummy;
+	usb_msg_profile_fbk_t *p_profilefbk = &g_msg_profile_fbk;
+	unsigned long t_start = GetCurrentTime_us();
+	USB_Msg_To_TxBulkBuffer((ptr_usb_msg_u8)&profile_msg, 64);
+	while (1)
+	{
+		res_wake = p_profilefbk->profile_fbk_wake.tryWait(nop_trywait_TIMEOUT);
+		if (res_wake == 1)
+		{
+			sprintf(str_log, "%s[%d] RespId:0x%02x, SubFunction:0x%02x,prof_num:%d",
+					__func__, __LINE__,
+					p_profilefbk->profile_fbk.cmd_id,
+					p_profilefbk->profile_fbk.sub_func,
+					p_profilefbk->profile_fbk.profile_number);
+			string tmp_string(str_log);
+			goDriverLogger.Log("info", tmp_string);
+			res = 0;
+		}
+		else
+		{
+			sprintf(str_log, "%s[%d] time out", __func__, __LINE__);
+			string tmp_string(str_log);
+			goDriverLogger.Log("error", tmp_string);
+			res = -1;
+		}
+		break;
+	}
+	printf("get profile message, escape:%ld ms. \n", (GetCurrentTime_us() - t_start) / 1000);
+	return res;
+}
+
 bool USB_Msg_Parser(USB_TaskResp_msg_t *task_msg)
 {
 	usb_msg_u8 msg[MESSAGE_MAX];
@@ -740,6 +865,11 @@ bool USB_Msg_Parser(USB_TaskResp_msg_t *task_msg)
 			else if (p_taskmsg->cmd_id_rep == RespPositive_Reset)
 			{
 				memcpy(task_msg, (usb_msg_u8 *)msg, sizeof(usb_msg_reset_t));
+				b_new_msg = true;
+			}
+			else if (p_taskmsg->cmd_id_rep == RespPositive_Profile)
+			{
+				memcpy(task_msg, (usb_msg_u8 *)msg, sizeof(usb_msg_profile_t));
 				b_new_msg = true;
 			}
 		}

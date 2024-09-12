@@ -212,6 +212,22 @@ void CommandLineInterface()
                 }
             }
         }
+        else if (cmd == "get-profile01")
+        {
+            RTC_Profile_01_t res_profile01;
+            int res = usb_get_profile_01(&res_profile01);
+            printf("res_profile01-01:%d\n",res_profile01.profile_01_01);
+            printf("res_profile01-02:%d\n",res_profile01.profile_01_02);
+            printf("res_profile01-03:%d\n",res_profile01.profile_01_03);
+            printf("res_profile01-04:%d\n",res_profile01.profile_01_04);
+            printf("res_profile01-05:%d\n",res_profile01.profile_01_05);
+            printf("res_profile01-06:%d\n",res_profile01.profile_01_06);
+        }
+        else if (cmd == "set-profile01")
+        {
+            RTC_Profile_01_t set_profile01={11,-12,12345,-32700,1147000012,-2112345678};
+            int res = usb_set_profile_01(set_profile01);
+        }
         else if (cmd == "tcp")
         {
             int res;

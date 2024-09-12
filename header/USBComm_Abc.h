@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
+#include <ONS_General.h>
 //#include "Msg_Prot.h"
 
 #define USB_VID_Bootloader_RTC 0xf000
@@ -24,7 +25,7 @@
 #define ADDR_Config_FICD 0xF8000E
 #define BIT_RSTPRI 0x04
 #define BL_USB_DATASIZE 48
-#define MSG_DATA_SIZE 62
+#define MSG_DATA_SIZE 60
 
 typedef unsigned char *ptr_usb_msg_u8;
 typedef unsigned char usb_msg_u8;
@@ -56,6 +57,7 @@ enum Protocol_Command
 {
 	Cmd_Echo = 0x00,
 	Cmd_Reset = 0x01,
+	Cmd_Profile = 0x02,
 	Cmd_MAX,
 };
 
@@ -63,11 +65,38 @@ enum Protocol_PositiveResponse
 {
 	RespPositive_Echo = 0x40,
 	RespPositive_Reset = 0x41,
+	RespPositive_Profile = 0x42,
 };
 
 enum Protocol_NegativeResponse
 {
 	RespNeg = 0x7f,
+};
+
+enum Protocol_Dummy
+{
+	Dummy = 0xff,
+};
+
+enum Echo_SubFunc
+{
+	SubFunc_55 = 0x55,
+	SubFunc_AA = 0xAA,
+};
+
+enum Reset_SubFunc
+{
+	SubFunc_reset_mcu = 1,
+	SubFunc_reset_usb = 2,
+	SubFunc_reset_uart = 3,
+	SubFunc_reset_max,
+};
+
+enum Profile_SubFunc
+{
+	SubFunc_profile_get = 1,
+	SubFunc_profile_set = 2,
+	SubFunc_profile_max,
 };
 
 enum Reponse_Code
@@ -170,6 +199,8 @@ typedef struct
 {
 	unsigned char cmd_id;
 	unsigned char sub_func;
+	unsigned char ignore0;
+	unsigned char ignore1;
 	unsigned char data[MSG_DATA_SIZE];
 } USB_Task_msg_t;
 
@@ -177,6 +208,8 @@ typedef struct
 {
 	unsigned char cmd_id_rep;
 	unsigned char sub_func;
+	unsigned char argv0;
+	unsigned char argv1;
 	unsigned char data[MSG_DATA_SIZE];
 } USB_TaskResp_msg_t;
 
@@ -216,6 +249,31 @@ typedef struct
 	Poco::Event reset_fbk_wake;
 } usb_msg_reset_fbk_t;
 
+typedef struct
+{
+	unsigned char cmd_id;
+	unsigned char sub_func;
+	unsigned char profile_number;
+	unsigned char ignore;
+	unsigned char data[60];
+} usb_msg_profile_t;
+
+typedef struct
+{
+	usb_msg_profile_t profile_fbk;
+	Poco::Event profile_fbk_wake;
+} usb_msg_profile_fbk_t;
+
+typedef struct
+{
+    UCHAR_8 profile_01_01;
+    CHAR_8 profile_01_02;
+    UINT_16 profile_01_03;
+    INT_16 profile_01_04;
+    UINT_32 profile_01_05;
+    INT_32 profile_01_06;
+} RTC_Profile_01_t;
+
 int USBComm_Driver_GetDeviceList(int *suitable_device, int en_print);
 int USBComm_Driver_SelectTargetDevice(unsigned short idVendor, unsigned short idProduct);
 int USBComm_Driver_getTargetDevice(void);
@@ -250,5 +308,9 @@ char USB_Msg_To_TxBulkBuffer(ptr_usb_msg_u8 send_msg, unsigned char msg_size);
 unsigned long GetCurrentTime_us(void);
 int usb_message_echo(unsigned char sub_func);
 int usb_message_reset(unsigned char sub_func, unsigned int delay_time = 500);
+int usb_message_profile_get(unsigned char profile_number, usb_msg_profile_t* profile_msg);
+int usb_message_profile_set(unsigned char profile_number, usb_msg_profile_t profile_msg);
 
+int usb_get_profile_01(RTC_Profile_01_t* ret_profile_01);
+int usb_set_profile_01(RTC_Profile_01_t set_profile_01);
 #endif
