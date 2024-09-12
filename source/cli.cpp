@@ -226,7 +226,7 @@ void CommandLineInterface()
         else if (cmd == "set-profile01")
         {
             RTC_Profile_01_t set_profile01={11,-12,12345,-32700,1147000012,-2112345678};
-            int res = usb_set_profile_01(set_profile01);
+            int res = usb_set_profile_01(&set_profile01);
         }
         else if (cmd == "tcp")
         {

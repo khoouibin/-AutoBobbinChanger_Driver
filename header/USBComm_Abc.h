@@ -309,8 +309,8 @@ unsigned long GetCurrentTime_us(void);
 int usb_message_echo(unsigned char sub_func);
 int usb_message_reset(unsigned char sub_func, unsigned int delay_time = 500);
 int usb_message_profile_get(unsigned char profile_number, usb_msg_profile_t* profile_msg);
-int usb_message_profile_set(unsigned char profile_number, usb_msg_profile_t profile_msg);
+int usb_message_profile_set(unsigned char profile_number, usb_msg_profile_t* profile_msg);
 
 int usb_get_profile_01(RTC_Profile_01_t* ret_profile_01);
-int usb_set_profile_01(RTC_Profile_01_t set_profile_01);
+int usb_set_profile_01(RTC_Profile_01_t* set_profile_01);
 #endif
