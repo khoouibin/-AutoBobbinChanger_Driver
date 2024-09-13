@@ -726,12 +726,34 @@ int usb_get_profile_01(RTC_Profile_01_t* ret_profile_01)
 	res = usb_message_profile_get(01, &usb_profile_msg);
 	if (res == 0)
 	{
-		memcpy(&ret_profile_01->profile_01_01, (ptr_usb_msg_u8)&usb_profile_msg.data, sizeof(ret_profile_01->profile_01_01));
-		memcpy(&ret_profile_01->profile_01_02, (ptr_usb_msg_u8)&usb_profile_msg.data + sizeof(ret_profile_01->profile_01_01), sizeof(ret_profile_01->profile_01_02));
-		memcpy(&ret_profile_01->profile_01_03, (ptr_usb_msg_u8)&usb_profile_msg.data + sizeof(ret_profile_01->profile_01_01) + sizeof(ret_profile_01->profile_01_02), sizeof(ret_profile_01->profile_01_03));
-		memcpy(&ret_profile_01->profile_01_04, (ptr_usb_msg_u8)&usb_profile_msg.data + sizeof(ret_profile_01->profile_01_01) + sizeof(ret_profile_01->profile_01_02) + sizeof(ret_profile_01->profile_01_03), sizeof(ret_profile_01->profile_01_04));
-		memcpy(&ret_profile_01->profile_01_05, (ptr_usb_msg_u8)&usb_profile_msg.data + sizeof(ret_profile_01->profile_01_01) + sizeof(ret_profile_01->profile_01_02) + sizeof(ret_profile_01->profile_01_03) + sizeof(ret_profile_01->profile_01_04), sizeof(ret_profile_01->profile_01_05));
-		memcpy(&ret_profile_01->profile_01_06, (ptr_usb_msg_u8)&usb_profile_msg.data + sizeof(ret_profile_01->profile_01_01) + sizeof(ret_profile_01->profile_01_02) + sizeof(ret_profile_01->profile_01_03) + sizeof(ret_profile_01->profile_01_04) + sizeof(ret_profile_01->profile_01_05), sizeof(ret_profile_01->profile_01_06));
+		memcpy(&ret_profile_01->p01_01, (ptr_usb_msg_u8)&usb_profile_msg.data, sizeof(ret_profile_01->p01_01));
+		memcpy(&ret_profile_01->p01_02, (ptr_usb_msg_u8)&usb_profile_msg.data + sizeof(ret_profile_01->p01_01), sizeof(ret_profile_01->p01_02));
+		memcpy(&ret_profile_01->p01_03, (ptr_usb_msg_u8)&usb_profile_msg.data + sizeof(ret_profile_01->p01_01) + sizeof(ret_profile_01->p01_02), sizeof(ret_profile_01->p01_03));
+		memcpy(&ret_profile_01->p01_04, (ptr_usb_msg_u8)&usb_profile_msg.data + sizeof(ret_profile_01->p01_01) + sizeof(ret_profile_01->p01_02) + sizeof(ret_profile_01->p01_03), sizeof(ret_profile_01->p01_04));
+		memcpy(&ret_profile_01->p01_05, (ptr_usb_msg_u8)&usb_profile_msg.data + sizeof(ret_profile_01->p01_01) + sizeof(ret_profile_01->p01_02) + sizeof(ret_profile_01->p01_03) + sizeof(ret_profile_01->p01_04), sizeof(ret_profile_01->p01_05));
+		memcpy(&ret_profile_01->p01_06, (ptr_usb_msg_u8)&usb_profile_msg.data + sizeof(ret_profile_01->p01_01) + sizeof(ret_profile_01->p01_02) + sizeof(ret_profile_01->p01_03) + sizeof(ret_profile_01->p01_04) + sizeof(ret_profile_01->p01_05), sizeof(ret_profile_01->p01_06));
+	}
+	return res;
+}
+
+int usb_get_profile_02(RTC_Profile_02_t* ret_profile_02)
+{
+	int res = 0;
+	usb_msg_profile_t usb_profile_msg;
+	res = usb_message_profile_get(02, &usb_profile_msg);
+	if (res == 0)
+	{
+		memcpy(&ret_profile_02->p02_01, (ptr_usb_msg_u8)&usb_profile_msg.data, sizeof(ret_profile_02->p02_01));
+		memcpy(&ret_profile_02->p02_02, (ptr_usb_msg_u8)&usb_profile_msg.data + sizeof(ret_profile_02->p02_01), sizeof(ret_profile_02->p02_02));
+		memcpy(&ret_profile_02->p02_03, (ptr_usb_msg_u8)&usb_profile_msg.data + sizeof(ret_profile_02->p02_01) + sizeof(ret_profile_02->p02_02), sizeof(ret_profile_02->p02_03));
+		memcpy(&ret_profile_02->p02_04, (ptr_usb_msg_u8)&usb_profile_msg.data + sizeof(ret_profile_02->p02_01) + sizeof(ret_profile_02->p02_02) + sizeof(ret_profile_02->p02_03), sizeof(ret_profile_02->p02_04));
+		memcpy(&ret_profile_02->p02_05, (ptr_usb_msg_u8)&usb_profile_msg.data + sizeof(ret_profile_02->p02_01) + sizeof(ret_profile_02->p02_02) + sizeof(ret_profile_02->p02_03) + sizeof(ret_profile_02->p02_04), sizeof(ret_profile_02->p02_05));
+		memcpy(&ret_profile_02->p02_06, (ptr_usb_msg_u8)&usb_profile_msg.data + sizeof(ret_profile_02->p02_01) + sizeof(ret_profile_02->p02_02) + sizeof(ret_profile_02->p02_03) + sizeof(ret_profile_02->p02_04) + sizeof(ret_profile_02->p02_05), sizeof(ret_profile_02->p02_06));
+		memcpy(&ret_profile_02->p02_07, (ptr_usb_msg_u8)&usb_profile_msg.data + sizeof(ret_profile_02->p02_01) + sizeof(ret_profile_02->p02_02) + sizeof(ret_profile_02->p02_03) + sizeof(ret_profile_02->p02_04) + sizeof(ret_profile_02->p02_05)+ sizeof(ret_profile_02->p02_06), sizeof(ret_profile_02->p02_07));
+		memcpy(&ret_profile_02->p02_08, (ptr_usb_msg_u8)&usb_profile_msg.data + sizeof(ret_profile_02->p02_01) + sizeof(ret_profile_02->p02_02) + sizeof(ret_profile_02->p02_03) + sizeof(ret_profile_02->p02_04) + sizeof(ret_profile_02->p02_05)+ sizeof(ret_profile_02->p02_06)+ sizeof(ret_profile_02->p02_07), sizeof(ret_profile_02->p02_08));
+		memcpy(&ret_profile_02->p02_09, (ptr_usb_msg_u8)&usb_profile_msg.data + sizeof(ret_profile_02->p02_01) + sizeof(ret_profile_02->p02_02) + sizeof(ret_profile_02->p02_03) + sizeof(ret_profile_02->p02_04) + sizeof(ret_profile_02->p02_05)+ sizeof(ret_profile_02->p02_06)+ sizeof(ret_profile_02->p02_07)+ sizeof(ret_profile_02->p02_08), sizeof(ret_profile_02->p02_09));
+		memcpy(&ret_profile_02->p02_10, (ptr_usb_msg_u8)&usb_profile_msg.data + sizeof(ret_profile_02->p02_01) + sizeof(ret_profile_02->p02_02) + sizeof(ret_profile_02->p02_03) + sizeof(ret_profile_02->p02_04) + sizeof(ret_profile_02->p02_05)+ sizeof(ret_profile_02->p02_06)+ sizeof(ret_profile_02->p02_07)+ sizeof(ret_profile_02->p02_08)+ sizeof(ret_profile_02->p02_09), sizeof(ret_profile_02->p02_10));
+		memcpy(&ret_profile_02->p02_11, (ptr_usb_msg_u8)&usb_profile_msg.data + sizeof(ret_profile_02->p02_01) + sizeof(ret_profile_02->p02_02) + sizeof(ret_profile_02->p02_03) + sizeof(ret_profile_02->p02_04) + sizeof(ret_profile_02->p02_05)+ sizeof(ret_profile_02->p02_06)+ sizeof(ret_profile_02->p02_07)+ sizeof(ret_profile_02->p02_08)+ sizeof(ret_profile_02->p02_09)+ sizeof(ret_profile_02->p02_10), sizeof(ret_profile_02->p02_11));
 	}
 	return res;
 }
@@ -781,13 +803,32 @@ int usb_set_profile_01(RTC_Profile_01_t *set_profile_01)
 {
 	int res = 0;
 	usb_msg_profile_t usb_profile_msg;
-	memcpy(usb_profile_msg.data + 0, (ptr_usb_msg_u8)&set_profile_01->profile_01_01, sizeof(set_profile_01->profile_01_01));
-	memcpy(usb_profile_msg.data + sizeof(set_profile_01->profile_01_01), (ptr_usb_msg_u8)&set_profile_01->profile_01_02, sizeof(set_profile_01->profile_01_02));
-	memcpy(usb_profile_msg.data + sizeof(set_profile_01->profile_01_01) + sizeof(set_profile_01->profile_01_02), (ptr_usb_msg_u8)&set_profile_01->profile_01_03, sizeof(set_profile_01->profile_01_03));
-	memcpy(usb_profile_msg.data + sizeof(set_profile_01->profile_01_01) + sizeof(set_profile_01->profile_01_02) + sizeof(set_profile_01->profile_01_03), (ptr_usb_msg_u8)&set_profile_01->profile_01_04, sizeof(set_profile_01->profile_01_04));
-	memcpy(usb_profile_msg.data + sizeof(set_profile_01->profile_01_01) + sizeof(set_profile_01->profile_01_02) + sizeof(set_profile_01->profile_01_03) + sizeof(set_profile_01->profile_01_04), (ptr_usb_msg_u8)&set_profile_01->profile_01_05, sizeof(set_profile_01->profile_01_05));
-	memcpy(usb_profile_msg.data + sizeof(set_profile_01->profile_01_01) + sizeof(set_profile_01->profile_01_02) + sizeof(set_profile_01->profile_01_03) + sizeof(set_profile_01->profile_01_04) + sizeof(set_profile_01->profile_01_05), (ptr_usb_msg_u8)&set_profile_01->profile_01_06, sizeof(set_profile_01->profile_01_06));
+	memcpy(usb_profile_msg.data + 0, (ptr_usb_msg_u8)&set_profile_01->p01_01, sizeof(set_profile_01->p01_01));
+	memcpy(usb_profile_msg.data + sizeof(set_profile_01->p01_01), (ptr_usb_msg_u8)&set_profile_01->p01_02, sizeof(set_profile_01->p01_02));
+	memcpy(usb_profile_msg.data + sizeof(set_profile_01->p01_01) + sizeof(set_profile_01->p01_02), (ptr_usb_msg_u8)&set_profile_01->p01_03, sizeof(set_profile_01->p01_03));
+	memcpy(usb_profile_msg.data + sizeof(set_profile_01->p01_01) + sizeof(set_profile_01->p01_02) + sizeof(set_profile_01->p01_03), (ptr_usb_msg_u8)&set_profile_01->p01_04, sizeof(set_profile_01->p01_04));
+	memcpy(usb_profile_msg.data + sizeof(set_profile_01->p01_01) + sizeof(set_profile_01->p01_02) + sizeof(set_profile_01->p01_03) + sizeof(set_profile_01->p01_04), (ptr_usb_msg_u8)&set_profile_01->p01_05, sizeof(set_profile_01->p01_05));
+	memcpy(usb_profile_msg.data + sizeof(set_profile_01->p01_01) + sizeof(set_profile_01->p01_02) + sizeof(set_profile_01->p01_03) + sizeof(set_profile_01->p01_04) + sizeof(set_profile_01->p01_05), (ptr_usb_msg_u8)&set_profile_01->p01_06, sizeof(set_profile_01->p01_06));
 	res = usb_message_profile_set(01, &usb_profile_msg);
+	return res;
+}
+
+int usb_set_profile_02(RTC_Profile_02_t *set_profile_02)
+{
+	int res = 0;
+	usb_msg_profile_t usb_profile_msg;
+	memcpy(usb_profile_msg.data, (ptr_usb_msg_u8)&set_profile_02->p02_01, sizeof(set_profile_02->p02_01));
+	memcpy(usb_profile_msg.data + sizeof(set_profile_02->p02_01), (ptr_usb_msg_u8)&set_profile_02->p02_02, sizeof(set_profile_02->p02_02));
+	memcpy(usb_profile_msg.data + sizeof(set_profile_02->p02_01) + sizeof(set_profile_02->p02_02), (ptr_usb_msg_u8)&set_profile_02->p02_03, sizeof(set_profile_02->p02_03));
+	memcpy(usb_profile_msg.data + sizeof(set_profile_02->p02_01) + sizeof(set_profile_02->p02_02) + sizeof(set_profile_02->p02_03), (ptr_usb_msg_u8)&set_profile_02->p02_04, sizeof(set_profile_02->p02_04));
+	memcpy(usb_profile_msg.data + sizeof(set_profile_02->p02_01) + sizeof(set_profile_02->p02_02) + sizeof(set_profile_02->p02_03) + sizeof(set_profile_02->p02_04), (ptr_usb_msg_u8)&set_profile_02->p02_05, sizeof(set_profile_02->p02_05));
+	memcpy(usb_profile_msg.data + sizeof(set_profile_02->p02_01) + sizeof(set_profile_02->p02_02) + sizeof(set_profile_02->p02_03) + sizeof(set_profile_02->p02_04) + sizeof(set_profile_02->p02_05), (ptr_usb_msg_u8)&set_profile_02->p02_06, sizeof(set_profile_02->p02_06));
+	memcpy(usb_profile_msg.data + sizeof(set_profile_02->p02_01) + sizeof(set_profile_02->p02_02) + sizeof(set_profile_02->p02_03) + sizeof(set_profile_02->p02_04) + sizeof(set_profile_02->p02_05) + sizeof(set_profile_02->p02_06), (ptr_usb_msg_u8)&set_profile_02->p02_07, sizeof(set_profile_02->p02_07));
+	memcpy(usb_profile_msg.data + sizeof(set_profile_02->p02_01) + sizeof(set_profile_02->p02_02) + sizeof(set_profile_02->p02_03) + sizeof(set_profile_02->p02_04) + sizeof(set_profile_02->p02_05) + sizeof(set_profile_02->p02_06) + sizeof(set_profile_02->p02_07), (ptr_usb_msg_u8)&set_profile_02->p02_08, sizeof(set_profile_02->p02_08));
+	memcpy(usb_profile_msg.data + sizeof(set_profile_02->p02_01) + sizeof(set_profile_02->p02_02) + sizeof(set_profile_02->p02_03) + sizeof(set_profile_02->p02_04) + sizeof(set_profile_02->p02_05) + sizeof(set_profile_02->p02_06) + sizeof(set_profile_02->p02_07) + sizeof(set_profile_02->p02_08), (ptr_usb_msg_u8)&set_profile_02->p02_09, sizeof(set_profile_02->p02_09));
+	memcpy(usb_profile_msg.data + sizeof(set_profile_02->p02_01) + sizeof(set_profile_02->p02_02) + sizeof(set_profile_02->p02_03) + sizeof(set_profile_02->p02_04) + sizeof(set_profile_02->p02_05) + sizeof(set_profile_02->p02_06) + sizeof(set_profile_02->p02_07) + sizeof(set_profile_02->p02_08) + sizeof(set_profile_02->p02_09), (ptr_usb_msg_u8)&set_profile_02->p02_10, sizeof(set_profile_02->p02_10));
+	memcpy(usb_profile_msg.data + sizeof(set_profile_02->p02_01) + sizeof(set_profile_02->p02_02) + sizeof(set_profile_02->p02_03) + sizeof(set_profile_02->p02_04) + sizeof(set_profile_02->p02_05) + sizeof(set_profile_02->p02_06) + sizeof(set_profile_02->p02_07) + sizeof(set_profile_02->p02_08) + sizeof(set_profile_02->p02_09) + sizeof(set_profile_02->p02_10), (ptr_usb_msg_u8)&set_profile_02->p02_11, sizeof(set_profile_02->p02_11));
+	res = usb_message_profile_set(02, &usb_profile_msg);
 	return res;
 }
 

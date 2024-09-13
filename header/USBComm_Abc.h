@@ -266,13 +266,28 @@ typedef struct
 
 typedef struct
 {
-    UCHAR_8 profile_01_01;
-    CHAR_8 profile_01_02;
-    UINT_16 profile_01_03;
-    INT_16 profile_01_04;
-    UINT_32 profile_01_05;
-    INT_32 profile_01_06;
+	UCHAR_8 p01_01;
+	CHAR_8 p01_02;
+	UINT_16 p01_03;
+	INT_16 p01_04;
+	UINT_32 p01_05;
+	INT_32 p01_06;
 } RTC_Profile_01_t;
+
+typedef struct
+{
+    UCHAR_8 p02_01;
+    CHAR_8 p02_02;
+    INT_16 p02_03;
+    INT_16 p02_04;
+    INT_32 p02_05;
+    INT_32 p02_06;
+    INT_32 p02_07;
+    CHAR_8 p02_08;
+    INT_32 p02_09;
+    CHAR_8 p02_10;
+    INT_32 p02_11;
+} RTC_Profile_02_t;
 
 int USBComm_Driver_GetDeviceList(int *suitable_device, int en_print);
 int USBComm_Driver_SelectTargetDevice(unsigned short idVendor, unsigned short idProduct);
@@ -313,4 +328,7 @@ int usb_message_profile_set(unsigned char profile_number, usb_msg_profile_t* pro
 
 int usb_get_profile_01(RTC_Profile_01_t* ret_profile_01);
 int usb_set_profile_01(RTC_Profile_01_t* set_profile_01);
+
+int usb_get_profile_02(RTC_Profile_02_t* ret_profile_02);
+int usb_set_profile_02(RTC_Profile_02_t* set_profile_02);
 #endif

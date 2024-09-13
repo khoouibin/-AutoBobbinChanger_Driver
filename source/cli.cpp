@@ -216,17 +216,38 @@ void CommandLineInterface()
         {
             RTC_Profile_01_t res_profile01;
             int res = usb_get_profile_01(&res_profile01);
-            printf("res_profile01-01:%d\n",res_profile01.profile_01_01);
-            printf("res_profile01-02:%d\n",res_profile01.profile_01_02);
-            printf("res_profile01-03:%d\n",res_profile01.profile_01_03);
-            printf("res_profile01-04:%d\n",res_profile01.profile_01_04);
-            printf("res_profile01-05:%d\n",res_profile01.profile_01_05);
-            printf("res_profile01-06:%d\n",res_profile01.profile_01_06);
+            printf("res_profile01-01:%d\n",res_profile01.p01_01);
+            printf("res_profile01-02:%d\n",res_profile01.p01_02);
+            printf("res_profile01-03:%d\n",res_profile01.p01_03);
+            printf("res_profile01-04:%d\n",res_profile01.p01_04);
+            printf("res_profile01-05:%d\n",res_profile01.p01_05);
+            printf("res_profile01-06:%d\n",res_profile01.p01_06);
         }
         else if (cmd == "set-profile01")
         {
             RTC_Profile_01_t set_profile01={11,-12,12345,-32700,1147000012,-2112345678};
             int res = usb_set_profile_01(&set_profile01);
+        }
+        else if (cmd == "get-profile02")
+        {
+            RTC_Profile_02_t res_profile02;
+            int res = usb_get_profile_02(&res_profile02);
+            printf("res_profile02-01:%d\n", res_profile02.p02_01);
+            printf("res_profile02-02:%d\n", res_profile02.p02_02);
+            printf("res_profile02-03:%d\n", res_profile02.p02_03);
+            printf("res_profile02-04:%d\n", res_profile02.p02_04);
+            printf("res_profile02-05:%d\n", res_profile02.p02_05);
+            printf("res_profile02-06:%d\n", res_profile02.p02_06);
+            printf("res_profile02-07:%d\n", res_profile02.p02_07);
+            printf("res_profile02-08:%d\n", res_profile02.p02_08);
+            printf("res_profile02-09:%d\n", res_profile02.p02_09);
+            printf("res_profile02-10:%d\n", res_profile02.p02_10);
+            printf("res_profile02-11:%d\n", res_profile02.p02_11);
+        }
+        else if (cmd == "set-profile02")
+        {
+            RTC_Profile_02_t set_profile02={05,-5,6666,-6666,111222333,-111222333,444222333,-111,-2,-3,-4};
+            int res = usb_set_profile_02(&set_profile02);
         }
         else if (cmd == "tcp")
         {
