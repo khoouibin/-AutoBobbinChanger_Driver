@@ -58,6 +58,7 @@ enum Protocol_Command
 	Cmd_Echo = 0x00,
 	Cmd_Reset = 0x01,
 	Cmd_Profile = 0x02,
+	Cmd_Log = 0x03,
 	Cmd_MAX,
 };
 
@@ -66,6 +67,7 @@ enum Protocol_PositiveResponse
 	RespPositive_Echo = 0x40,
 	RespPositive_Reset = 0x41,
 	RespPositive_Profile = 0x42,
+	RespPositive_Log = 0x43,
 };
 
 enum Protocol_NegativeResponse
@@ -99,13 +101,21 @@ enum Profile_SubFunc
 	SubFunc_profile_max,
 };
 
+enum Log_SubFunc
+{
+	SubFunc_log_level_get = 1,
+	SubFunc_log_level_set = 2,
+	SubFunc_log_msg_reply = 3,
+	SubFunc_log_max,
+};
+
 enum Reponse_Code
 {
 	POSITIVE_CODE = 0x00,
 	NRC_SIZE_ZERO = 0x81,
 	NRC_SIZE_nZERO = 0x82,
 	NRC_SIZE_EXCEED = 0x83,
-	NRC_ADDR_OUTRANGE = 0x84,
+	NRC_SUBFUNC_OUTRANGE = 0x84,
 	NRC_DATA_OUTRANGE = 0x85,
 	NRC_CMD_NOT_FOUND = 0x86,
 };
@@ -266,6 +276,31 @@ typedef struct
 
 typedef struct
 {
+	unsigned char cmd_id;
+	unsigned char sub_func;
+	unsigned char set_level;
+	unsigned char ignore;
+	unsigned char data[MSG_DATA_SIZE];
+} usb_msg_log_t;
+
+typedef struct
+{
+	unsigned char cmd_id_rep;
+	unsigned char sub_func;
+	unsigned short log_counter;
+	unsigned char data[MSG_DATA_SIZE];
+} usb_msg_log_reply_t;
+
+typedef struct
+{
+	usb_msg_log_reply_t log_setting_fbk;
+	Poco::Event log_setting_fbk_wake;
+} usb_msg_log_setting_fbk_t;
+
+
+// should be create a profile.h to collect below.
+typedef struct
+{
 	UCHAR_8 p01_01;
 	CHAR_8 p01_02;
 	UINT_16 p01_03;
@@ -331,4 +366,7 @@ int usb_set_profile_01(RTC_Profile_01_t* set_profile_01);
 
 int usb_get_profile_02(RTC_Profile_02_t* ret_profile_02);
 int usb_set_profile_02(RTC_Profile_02_t* set_profile_02);
+
+int usb_message_log_level_get();
+
 #endif

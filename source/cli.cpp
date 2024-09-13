@@ -249,6 +249,11 @@ void CommandLineInterface()
             RTC_Profile_02_t set_profile02={05,-5,6666,-6666,111222333,-111222333,444222333,-111,-2,-3,-4};
             int res = usb_set_profile_02(&set_profile02);
         }
+        else if (cmd == "get-loglvl")
+        {
+            usb_message_log_level_get();
+            continue;
+        }
         else if (cmd == "tcp")
         {
             int res;
