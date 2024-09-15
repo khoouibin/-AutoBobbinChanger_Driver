@@ -109,6 +109,16 @@ enum Log_SubFunc
 	SubFunc_log_max,
 };
 
+enum LogLev
+{
+    Critial_Lev = 1,
+    Error_Lev = 2,
+    Warning_Lev = 4,
+    Info_Lev = 8,
+    Debug_Lev = 16,
+    LogLev_MAX
+};
+
 enum Reponse_Code
 {
 	POSITIVE_CODE = 0x00,
@@ -368,5 +378,5 @@ int usb_get_profile_02(RTC_Profile_02_t* ret_profile_02);
 int usb_set_profile_02(RTC_Profile_02_t* set_profile_02);
 
 int usb_message_log_level_get();
-
+int usb_message_log_level_set(enum LogLev u8_value);
 #endif

@@ -426,19 +426,17 @@ void *USBComm_Task_Service_Abc(void *p)
 
 	char msg_res;
 	char USB_Parser_res;
+	unsigned char msg_length;
+    bool new_msg;	
     USB_TaskResp_msg_t Task_msg;
-    USB_TaskResp_msg_t* pTask_msg;
-	usb_msg_log_reply_t* pLogsetting_msg;
+    USB_TaskResp_msg_t* pTask_msg=&Task_msg;
     usb_msg_u8 msg[MESSAGE_MAX];
 
 	usb_msg_echo_fbk_t* p_echofbk= &g_msg_echo_fbk;
 	usb_msg_reset_fbk_t* p_resetfbk= &g_msg_reset_fbk;
 	usb_msg_profile_fbk_t* p_profilefbk = &g_msg_profile_fbk;
 	usb_msg_log_setting_fbk_t* p_logsettingfbk = &g_msg_log_setting_fbk;
-	unsigned char msg_length;
-    bool new_msg;
-	pTask_msg = &Task_msg;
-	pLogsetting_msg = (usb_msg_log_reply_t*)&Task_msg;
+	usb_msg_log_reply_t* pLogsetting_msg = (usb_msg_log_reply_t*)&Task_msg;
 
 	pthread_detach(pthread_self());
 	while (g_b_USBComm_Task_run == true)
@@ -486,11 +484,12 @@ void *USBComm_Task_Service_Abc(void *p)
 					}
 					else if (Task_msg.cmd_id_rep==RespPositive_Log)
 					{
-						// p_logsettingfbk->profile_fbk.cmd_id =Task_msg.cmd_id_rep;
-						// p_profilefbk->profile_fbk.sub_func =Task_msg.sub_func;
-						// p_profilefbk->profile_fbk.profile_number =Task_msg.argv0;
-						// memcpy(p_profilefbk->profile_fbk.data, pTask_msg->data, MSG_DATA_SIZE);
-						// p_profilefbk->profile_fbk_wake.set();
+						p_logsettingfbk->log_setting_fbk.cmd_id_rep = pLogsetting_msg->cmd_id_rep;
+						p_logsettingfbk->log_setting_fbk.sub_func = pLogsetting_msg->sub_func;
+						p_logsettingfbk->log_setting_fbk.data[0] = pLogsetting_msg->data[0];
+						p_logsettingfbk->log_setting_fbk_wake.set();
+
+						printf("hello----\n");
 					}
 				}
 				res = 0;
@@ -921,6 +920,47 @@ int usb_message_log_level_get()
 		break;
 	}
 	printf("get log-setting message, escape:%ld ms. \n", (GetCurrentTime_us() - t_start) / 1000);
+	return res;
+}
+
+int usb_message_log_level_set(enum LogLev u8_value)
+{
+	int res;
+	int res_wake;
+	int nop_trywait_TIMEOUT = 50;
+	usb_msg_log_t log_msg;
+	log_msg.cmd_id = Cmd_Log;
+	log_msg.sub_func = SubFunc_log_level_set;
+	log_msg.set_level = u8_value;
+	log_msg.ignore = Dummy;
+	usb_msg_log_setting_fbk_t *p_logsettingfbk = &g_msg_log_setting_fbk;
+	unsigned long t_start = GetCurrentTime_us();
+	USB_Msg_To_TxBulkBuffer((ptr_usb_msg_u8)&log_msg, 4);
+
+	while (1)
+	{
+		res_wake = p_logsettingfbk->log_setting_fbk_wake.tryWait(nop_trywait_TIMEOUT);
+		if (res_wake == 1)
+		{
+			sprintf(str_log, "%s[%d] RespId:0x%02x, SubFunction:0x%02x,debug_level:0x%02x",
+					__func__, __LINE__,
+					p_logsettingfbk->log_setting_fbk.cmd_id_rep,
+					p_logsettingfbk->log_setting_fbk.sub_func,
+					p_logsettingfbk->log_setting_fbk.data[0]);
+			string tmp_string(str_log);
+			goDriverLogger.Log("info", tmp_string);
+			res = 0;
+		}
+		else
+		{
+			sprintf(str_log, "%s[%d] time out", __func__, __LINE__);
+			string tmp_string(str_log);
+			goDriverLogger.Log("error", tmp_string);
+			res = -1;
+		}
+		break;
+	}
+	printf("set log-setting message, escape:%ld ms. \n", (GetCurrentTime_us() - t_start) / 1000);
 	return res;
 }
 
