@@ -484,12 +484,20 @@ void *USBComm_Task_Service_Abc(void *p)
 					}
 					else if (Task_msg.cmd_id_rep==RespPositive_Log)
 					{
-						p_logsettingfbk->log_setting_fbk.cmd_id_rep = pLogsetting_msg->cmd_id_rep;
-						p_logsettingfbk->log_setting_fbk.sub_func = pLogsetting_msg->sub_func;
-						p_logsettingfbk->log_setting_fbk.data[0] = pLogsetting_msg->data[0];
-						p_logsettingfbk->log_setting_fbk_wake.set();
-
-						printf("hello----\n");
+						if (pLogsetting_msg->sub_func == SubFunc_log_msg_reply)
+						{
+							sprintf(str_log, "%s[%d]cnt:%d, msg:%s", __func__, __LINE__,
+									(int)pLogsetting_msg->log_counter, pLogsetting_msg->data);
+							string tmp_string(str_log);
+							goDriverLogger.Log("debug", tmp_string);
+						}
+						else
+						{
+							p_logsettingfbk->log_setting_fbk.cmd_id_rep = pLogsetting_msg->cmd_id_rep;
+							p_logsettingfbk->log_setting_fbk.sub_func = pLogsetting_msg->sub_func;
+							p_logsettingfbk->log_setting_fbk.data[0] = pLogsetting_msg->data[0];
+							p_logsettingfbk->log_setting_fbk_wake.set();
+						}
 					}
 				}
 				res = 0;
