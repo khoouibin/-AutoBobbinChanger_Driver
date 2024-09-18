@@ -20,6 +20,8 @@ usb_msg_echo_fbk_t g_msg_echo_fbk;
 usb_msg_reset_fbk_t g_msg_reset_fbk;
 usb_msg_profile_fbk_t g_msg_profile_fbk;
 usb_msg_log_setting_fbk_t g_msg_log_setting_fbk;
+usb_msg_entitytable_fbk_t g_msg_entitytable_fbk;
+usb_msg_entitypack_fbk_t g_msg_entitypack_fbk;
 
 char str_log[256];
 char libusb_error_string[64];
@@ -437,6 +439,7 @@ void *USBComm_Task_Service_Abc(void *p)
 	usb_msg_profile_fbk_t* p_profilefbk = &g_msg_profile_fbk;
 	usb_msg_log_setting_fbk_t* p_logsettingfbk = &g_msg_log_setting_fbk;
 	usb_msg_log_reply_t* pLogsetting_msg = (usb_msg_log_reply_t*)&Task_msg;
+	usb_msg_entitytable_fbk_t *p_entitytable_fbk = &g_msg_entitytable_fbk;
 
 	pthread_detach(pthread_self());
 	while (g_b_USBComm_Task_run == true)
@@ -497,6 +500,18 @@ void *USBComm_Task_Service_Abc(void *p)
 							p_logsettingfbk->log_setting_fbk.sub_func = pLogsetting_msg->sub_func;
 							p_logsettingfbk->log_setting_fbk.data[0] = pLogsetting_msg->data[0];
 							p_logsettingfbk->log_setting_fbk_wake.set();
+						}
+					}
+					else if (Task_msg.cmd_id_rep == RespPositive_EntityTable)
+					{
+						if (Task_msg.sub_func == SubFunc_table_get_instant)
+						{
+							p_entitytable_fbk->entitytable_fbk.cmd_id_rep = Task_msg.cmd_id_rep;
+							p_entitytable_fbk->entitytable_fbk.sub_func = Task_msg.sub_func;
+							p_entitytable_fbk->entitytable_fbk.reply_period = Task_msg.argv0;
+							p_entitytable_fbk->entitytable_fbk.table_size = Task_msg.argv1;
+							memcpy(p_entitytable_fbk->entitytable_fbk.data, pTask_msg->data, sizeof(p_entitytable_fbk->entitytable_fbk.data));
+							p_entitytable_fbk->entitytable_fbk_wake.set();
 						}
 					}
 				}
@@ -665,8 +680,8 @@ int usb_message_echo(unsigned char sub_func)
 	usb_msg_echo_t msg_echo;
 	msg_echo.cmd_id = Cmd_Echo;
 	msg_echo.sub_func = sub_func;
-	msg_echo.data[0] = Dummy;
-	msg_echo.data[1] = Dummy;
+	msg_echo.data[0] = Dummy_ff;
+	msg_echo.data[1] = Dummy_ff;
 	memset(msg_echo.data, 0, sizeof(msg_echo.data));
 	usb_msg_echo_fbk_t* p_echofbk=&g_msg_echo_fbk;;
 	unsigned long t_start = GetCurrentTime_us();
@@ -785,7 +800,7 @@ int usb_message_profile_get(unsigned char profile_number, usb_msg_profile_t* pro
 	msg_profile.cmd_id = Cmd_Profile;
 	msg_profile.sub_func = SubFunc_profile_get;
 	msg_profile.profile_number = profile_number;
-	msg_profile.ignore = Dummy;
+	msg_profile.ignore = Dummy_ff;
 	usb_msg_profile_fbk_t *p_profilefbk = &g_msg_profile_fbk;
 	unsigned long t_start = GetCurrentTime_us();
 	USB_Msg_To_TxBulkBuffer((ptr_usb_msg_u8)&msg_profile, 4);
@@ -858,7 +873,7 @@ int usb_message_profile_set(unsigned char profile_number, usb_msg_profile_t* pro
 	profile_msg->cmd_id = Cmd_Profile;
 	profile_msg->sub_func = SubFunc_profile_set;
 	profile_msg->profile_number = profile_number;
-	profile_msg->ignore = Dummy;
+	profile_msg->ignore = Dummy_ff;
 	usb_msg_profile_fbk_t *p_profilefbk = &g_msg_profile_fbk;
 	unsigned long t_start = GetCurrentTime_us();
 	USB_Msg_To_TxBulkBuffer((ptr_usb_msg_u8)profile_msg, sizeof(usb_msg_profile_t));
@@ -898,8 +913,8 @@ int usb_message_log_level_get()
 	usb_msg_log_t log_msg;
 	log_msg.cmd_id = Cmd_Log;
 	log_msg.sub_func = SubFunc_log_level_get;
-	log_msg.set_level = Dummy;
-	log_msg.ignore = Dummy;
+	log_msg.set_level = Dummy_ff;
+	log_msg.ignore = Dummy_ff;
 	usb_msg_log_setting_fbk_t *p_logsettingfbk = &g_msg_log_setting_fbk;
 	unsigned long t_start = GetCurrentTime_us();
 	USB_Msg_To_TxBulkBuffer((ptr_usb_msg_u8)&log_msg, 4);
@@ -940,7 +955,7 @@ int usb_message_log_level_set(enum LogLev u8_value)
 	log_msg.cmd_id = Cmd_Log;
 	log_msg.sub_func = SubFunc_log_level_set;
 	log_msg.set_level = u8_value;
-	log_msg.ignore = Dummy;
+	log_msg.ignore = Dummy_ff;
 	usb_msg_log_setting_fbk_t *p_logsettingfbk = &g_msg_log_setting_fbk;
 	unsigned long t_start = GetCurrentTime_us();
 	USB_Msg_To_TxBulkBuffer((ptr_usb_msg_u8)&log_msg, 4);
@@ -969,6 +984,55 @@ int usb_message_log_level_set(enum LogLev u8_value)
 		break;
 	}
 	printf("set log-setting message, escape:%ld ms. \n", (GetCurrentTime_us() - t_start) / 1000);
+	return res;
+}
+
+int usb_message_get_entity_table()
+{
+	int res;
+	int res_wake;
+	int nop_trywait_TIMEOUT = 50;
+	usb_msg_entitytable_t entab_msg;
+	entab_msg.cmd_id = Cmd_EntityTable;
+	entab_msg.sub_func = SubFunc_table_get_instant;
+	entab_msg.reply_period = Dummy_00;
+	entab_msg.table_size = 22;
+	usb_msg_entitytable_fbk_t *p_entitytable_fbk = &g_msg_entitytable_fbk;
+	unsigned long t_start = GetCurrentTime_us();
+	USB_Msg_To_TxBulkBuffer((ptr_usb_msg_u8)&entab_msg, 4);
+
+	while (1)
+	{
+		res_wake = p_entitytable_fbk->entitytable_fbk_wake.tryWait(nop_trywait_TIMEOUT);
+		if (res_wake == 1)
+		{
+			sprintf(str_log, "%s[%d] RespId:0x%02x, SubFunction:0x%02x,period:%d,size:%d",
+					__func__, __LINE__,
+					p_entitytable_fbk->entitytable_fbk.cmd_id_rep,
+					p_entitytable_fbk->entitytable_fbk.sub_func,
+					p_entitytable_fbk->entitytable_fbk.reply_period,
+					p_entitytable_fbk->entitytable_fbk.table_size);
+			string tmp_string(str_log);
+			goDriverLogger.Log("info", tmp_string);
+
+			printf("entity byte:\n");
+			for (int i = 0; i < p_entitytable_fbk->entitytable_fbk.table_size; i++)
+			{
+				printf("[%d]=0x%02x", i, p_entitytable_fbk->entitytable_fbk.data[i]);
+			}
+			printf("\n");
+			res = 0;
+		}
+		else
+		{
+			sprintf(str_log, "%s[%d] time out", __func__, __LINE__);
+			string tmp_string(str_log);
+			goDriverLogger.Log("error", tmp_string);
+			res = -1;
+		}
+		break;
+	}
+	printf("get entity-table message, escape:%ld ms. \n", (GetCurrentTime_us() - t_start) / 1000);
 	return res;
 }
 
@@ -1016,6 +1080,11 @@ bool USB_Msg_Parser(USB_TaskResp_msg_t *task_msg)
 			else if (p_taskmsg->cmd_id_rep == RespPositive_Log)
 			{
 				memcpy(task_msg, (usb_msg_u8 *)msg, sizeof(usb_msg_log_reply_t));
+				b_new_msg = true;
+			}
+			else if (p_taskmsg->cmd_id_rep == RespPositive_EntityTable)
+			{
+				memcpy(task_msg, (usb_msg_u8 *)msg, sizeof(usb_msg_entitytable_reply_t));
 				b_new_msg = true;
 			}
 		}

@@ -259,6 +259,11 @@ void CommandLineInterface()
             usb_message_log_level_set(Critial_Lev);
             continue;
         }
+        else if (cmd == "gt")
+        {
+            usb_message_get_entity_table();
+            continue;
+        }
         else if (cmd == "tcp")
         {
             int res;
