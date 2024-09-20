@@ -259,10 +259,24 @@ void CommandLineInterface()
             usb_message_log_level_set(Critial_Lev);
             continue;
         }
-        else if (cmd == "gt")
+        else if (cmd == "entab-mode")
         {
-            usb_message_get_entity_table();
-            continue;
+            if (v.size() >= 2)
+            {
+                try
+                {
+                    int sub_func = std::stoi(v[1]);
+                    usb_message_set_entity_table_reply_mode(sub_func);
+                }
+                catch (const std::exception &e)
+                {
+                    std::cout << "echo message, exception:" << e.what() << '\n';
+                }
+            }
+            else
+            {
+                 printf("usb cmd  wrong, try again.\n");
+            }
         }
         else if (cmd == "tcp")
         {

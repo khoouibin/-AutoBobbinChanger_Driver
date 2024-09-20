@@ -504,7 +504,7 @@ void *USBComm_Task_Service_Abc(void *p)
 					}
 					else if (Task_msg.cmd_id_rep == RespPositive_EntityTable)
 					{
-						if (Task_msg.sub_func == SubFunc_table_get_instant)
+						if (Task_msg.sub_func == SubFunc_table_get_instant || Task_msg.sub_func == SubFunc_table_get_off)
 						{
 							p_entitytable_fbk->entitytable_fbk.cmd_id_rep = Task_msg.cmd_id_rep;
 							p_entitytable_fbk->entitytable_fbk.sub_func = Task_msg.sub_func;
@@ -512,6 +512,42 @@ void *USBComm_Task_Service_Abc(void *p)
 							p_entitytable_fbk->entitytable_fbk.table_size = Task_msg.argv1;
 							memcpy(p_entitytable_fbk->entitytable_fbk.data, pTask_msg->data, sizeof(p_entitytable_fbk->entitytable_fbk.data));
 							p_entitytable_fbk->entitytable_fbk_wake.set();
+							if (p_entitytable_fbk->entitytable_fbk.table_size > 0)
+							{
+								string str_entitytab_value = "";
+								for (int i = 0; i < p_entitytable_fbk->entitytable_fbk.table_size; i++)
+								{
+									sprintf(str_log, "0x%02x, ", p_entitytable_fbk->entitytable_fbk.data[i]);
+									str_entitytab_value += str_log;
+								}
+								sprintf(str_log, "%s[%d] RespId:0x%02x", __func__, __LINE__, Task_msg.cmd_id_rep);
+								string tmp_string(str_log);
+								tmp_string += str_entitytab_value;
+								goDriverLogger.Log("debug", str_entitytab_value);
+							}
+						}
+						else if (Task_msg.sub_func == SubFunc_table_get_changed || Task_msg.sub_func == SubFunc_table_get_period)
+						{
+							p_entitytable_fbk->entitytable_fbk.cmd_id_rep = Task_msg.cmd_id_rep;
+							p_entitytable_fbk->entitytable_fbk.sub_func = Task_msg.sub_func;
+							p_entitytable_fbk->entitytable_fbk.reply_period = Task_msg.argv0;
+							p_entitytable_fbk->entitytable_fbk.table_size = Task_msg.argv1;
+							memcpy(p_entitytable_fbk->entitytable_fbk.data, pTask_msg->data, sizeof(p_entitytable_fbk->entitytable_fbk.data));
+							p_entitytable_fbk->entitytable_fbk_wake.set();
+
+							if (p_entitytable_fbk->entitytable_fbk.table_size > 0)
+							{
+								string str_entitytab_value = "";
+								for (int i = 0; i < p_entitytable_fbk->entitytable_fbk.table_size; i++)
+								{
+									sprintf(str_log, "0x%02x, ", p_entitytable_fbk->entitytable_fbk.data[i]);
+									str_entitytab_value += str_log;
+								}
+								sprintf(str_log, "%s[%d] RespId:0x%02x", __func__, __LINE__, Task_msg.cmd_id_rep);
+								string tmp_string(str_log);
+								tmp_string += str_entitytab_value;
+								goDriverLogger.Log("debug", str_entitytab_value);
+							}
 						}
 					}
 				}
@@ -987,22 +1023,23 @@ int usb_message_log_level_set(enum LogLev u8_value)
 	return res;
 }
 
-int usb_message_get_entity_table()
+int usb_message_set_entity_table_reply_mode(int mode)
 {
 	int res;
 	int res_wake;
 	int nop_trywait_TIMEOUT = 50;
 	usb_msg_entitytable_t entab_msg;
 	entab_msg.cmd_id = Cmd_EntityTable;
-	entab_msg.sub_func = SubFunc_table_get_instant;
-	entab_msg.reply_period = Dummy_00;
-	entab_msg.table_size = 22;
+	entab_msg.sub_func = char(mode);
+	entab_msg.reply_period = (mode == SubFunc_table_get_period)?100:Dummy_00;
+	entab_msg.table_size = 0;
 	usb_msg_entitytable_fbk_t *p_entitytable_fbk = &g_msg_entitytable_fbk;
+	p_entitytable_fbk->entitytable_fbk_wake.reset();
 	unsigned long t_start = GetCurrentTime_us();
 	USB_Msg_To_TxBulkBuffer((ptr_usb_msg_u8)&entab_msg, 4);
-
 	while (1)
 	{
+
 		res_wake = p_entitytable_fbk->entitytable_fbk_wake.tryWait(nop_trywait_TIMEOUT);
 		if (res_wake == 1)
 		{
@@ -1014,13 +1051,6 @@ int usb_message_get_entity_table()
 					p_entitytable_fbk->entitytable_fbk.table_size);
 			string tmp_string(str_log);
 			goDriverLogger.Log("info", tmp_string);
-
-			printf("entity byte:\n");
-			for (int i = 0; i < p_entitytable_fbk->entitytable_fbk.table_size; i++)
-			{
-				printf("[%d]=0x%02x", i, p_entitytable_fbk->entitytable_fbk.data[i]);
-			}
-			printf("\n");
 			res = 0;
 		}
 		else
@@ -1032,7 +1062,7 @@ int usb_message_get_entity_table()
 		}
 		break;
 	}
-	printf("get entity-table message, escape:%ld ms. \n", (GetCurrentTime_us() - t_start) / 1000);
+	printf("set entity-table reply mode message, escape:%ld ms. \n", (GetCurrentTime_us() - t_start) / 1000);
 	return res;
 }
 

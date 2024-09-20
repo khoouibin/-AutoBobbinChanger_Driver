@@ -132,7 +132,6 @@ enum EntityTable_SubFunc
 	SubFunc_table_get_instant = 1,
 	SubFunc_table_get_period = 2,
 	SubFunc_table_get_changed = 3,
-	SubFunc_table_set = 5,
 	SubFunc_entitytable_max,
 };
 
@@ -472,6 +471,6 @@ int usb_set_profile_02(RTC_Profile_02_t* set_profile_02);
 int usb_message_log_level_get();
 int usb_message_log_level_set(enum LogLev u8_value);
 
-int usb_message_get_entity_table();
+int usb_message_set_entity_table_reply_mode(int mode);
 
 #endif
