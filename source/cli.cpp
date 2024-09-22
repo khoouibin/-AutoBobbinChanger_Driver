@@ -278,6 +278,59 @@ void CommandLineInterface()
                  printf("usb cmd  wrong, try again.\n");
             }
         }
+        else if (cmd == "en-get")
+        {
+            ioentity_pack_t entity_tmp;
+            vector<ioentity_pack_t> entities;
+
+            if (v.size() >= 2)
+            {
+                try
+                {
+                    for(int i = 1; i<v.size(); i++)
+                    {
+                        entity_tmp.entity_name=std::stoi(v[i]);
+                        entities.push_back(entity_tmp);
+                    }
+                    usb_message_get_entity_pack(&entities);
+                }
+                catch (const std::exception &e)
+                {
+                    std::cout << "echo message, exception:" << e.what() << '\n';
+                }
+            }
+            else
+            {
+                 printf("usb cmd  wrong, try again.\n");
+            }
+        }
+        else if (cmd == "en-set")
+        {
+            ioentity_pack_t entity_tmp;
+            vector<ioentity_pack_t> entities;
+
+            if (v.size() >= 2)
+            {
+                try
+                {
+                    for(int i = 1; i<v.size(); i+=2)
+                    {
+                        entity_tmp.entity_name=std::stoi(v[i]);
+                        entity_tmp.entity_value=std::stoi(v[i+1]);
+                        entities.push_back(entity_tmp);
+                    }
+                    usb_message_set_entity_pack(&entities);
+                }
+                catch (const std::exception &e)
+                {
+                    std::cout << "echo message, exception:" << e.what() << '\n';
+                }
+            }
+            else
+            {
+                 printf("usb cmd  wrong, try again.\n");
+            }
+        }
         else if (cmd == "tcp")
         {
             int res;

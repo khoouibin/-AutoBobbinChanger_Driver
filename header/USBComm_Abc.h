@@ -8,7 +8,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <ONS_General.h>
-//#include "Msg_Prot.h"
+#include <vector>
 
 #define USB_VID_Bootloader_RTC 0xf000
 #define USB_PID_Bootloader_RTC 0x5109
@@ -242,8 +242,8 @@ typedef struct
 {
 	unsigned char cmd_id;
 	unsigned char sub_func;
-	unsigned char ignore0;
-	unsigned char ignore1;
+	unsigned char argv_0;
+	unsigned char argv_1;
 	unsigned char data[MSG_DATA_SIZE];
 } USB_Task_msg_t;
 
@@ -251,8 +251,8 @@ typedef struct
 {
 	unsigned char cmd_id_rep;
 	unsigned char sub_func;
-	unsigned char argv0;
-	unsigned char argv1;
+	unsigned char argv_0;
+	unsigned char argv_1;
 	unsigned char data[MSG_DATA_SIZE];
 } USB_TaskResp_msg_t;
 
@@ -261,8 +261,8 @@ typedef struct
 	unsigned char resp_id;
 	unsigned char cmd_id;
 	unsigned char neg_code;
-	unsigned char ignore;
-	unsigned char data[60];
+	unsigned char neg_argv;
+	unsigned char data[MSG_DATA_SIZE];
 } USB_NegResponse_msg_t;
 
 
@@ -298,7 +298,7 @@ typedef struct
 	unsigned char sub_func;
 	unsigned char profile_number;
 	unsigned char ignore;
-	unsigned char data[60];
+	unsigned char data[MSG_DATA_SIZE];
 } usb_msg_profile_t;
 
 typedef struct
@@ -371,10 +371,10 @@ typedef struct
 
 typedef struct
 {
-	unsigned char cmd_id_rep;
+	unsigned char cmd_id;
 	unsigned char sub_func;
-	unsigned char reply_period;
 	unsigned char pack_size;
+	unsigned char argv;
 	ioentity_pack_t entity_pack[MSG_ENTITY_MAX_PACK_SIZE];
 } usb_msg_entity_pack_t;
 
@@ -382,8 +382,8 @@ typedef struct
 {
 	unsigned char cmd_id_rep;
 	unsigned char sub_func;
-	unsigned char reply_period;
 	unsigned char pack_size;
+	unsigned char argv;
 	ioentity_pack_t entity_pack[MSG_ENTITY_MAX_PACK_SIZE];
 } usb_msg_entity_pack_reply_t;
 
@@ -472,5 +472,6 @@ int usb_message_log_level_get();
 int usb_message_log_level_set(enum LogLev u8_value);
 
 int usb_message_set_entity_table_reply_mode(int mode);
-
+int usb_message_get_entity_pack(std::vector<ioentity_pack_t> *entities);
+int usb_message_set_entity_pack(std::vector<ioentity_pack_t> *entities);
 #endif

@@ -2,16 +2,15 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
-
-#include "Timers.h"
+#include <stdarg.h>
 #include <libusb-1.0/libusb.h>
 #include <iomanip>
+#include <arpa/inet.h>
+#include "Timers.h"
 #include "logger_wrapper.h"
 #include "USBComm_Abc.h"
-//#include "bl_ctrl.h"
 #include "Msg_Prot.h"
 #include "interface_driver_to_ui.h"
-#include <arpa/inet.h>
 
 USB_Transaction_State_t TxTransState;
 USB_Transaction_State_t RxTransState;
@@ -440,6 +439,8 @@ void *USBComm_Task_Service_Abc(void *p)
 	usb_msg_log_setting_fbk_t* p_logsettingfbk = &g_msg_log_setting_fbk;
 	usb_msg_log_reply_t* pLogsetting_msg = (usb_msg_log_reply_t*)&Task_msg;
 	usb_msg_entitytable_fbk_t *p_entitytable_fbk = &g_msg_entitytable_fbk;
+	usb_msg_entitypack_fbk_t *p_entitypack_fbk = &g_msg_entitypack_fbk;
+	usb_msg_entity_pack_t* p_entitypack_msg=(usb_msg_entity_pack_t*)&Task_msg;
 
 	pthread_detach(pthread_self());
 	while (g_b_USBComm_Task_run == true)
@@ -481,7 +482,7 @@ void *USBComm_Task_Service_Abc(void *p)
 					{
 						p_profilefbk->profile_fbk.cmd_id =Task_msg.cmd_id_rep;
 						p_profilefbk->profile_fbk.sub_func =Task_msg.sub_func;
-						p_profilefbk->profile_fbk.profile_number =Task_msg.argv0;
+						p_profilefbk->profile_fbk.profile_number =Task_msg.argv_0;
 						memcpy(p_profilefbk->profile_fbk.data, pTask_msg->data, MSG_DATA_SIZE);
 						p_profilefbk->profile_fbk_wake.set();
 					}
@@ -508,8 +509,8 @@ void *USBComm_Task_Service_Abc(void *p)
 						{
 							p_entitytable_fbk->entitytable_fbk.cmd_id_rep = Task_msg.cmd_id_rep;
 							p_entitytable_fbk->entitytable_fbk.sub_func = Task_msg.sub_func;
-							p_entitytable_fbk->entitytable_fbk.reply_period = Task_msg.argv0;
-							p_entitytable_fbk->entitytable_fbk.table_size = Task_msg.argv1;
+							p_entitytable_fbk->entitytable_fbk.reply_period = Task_msg.argv_0;
+							p_entitytable_fbk->entitytable_fbk.table_size = Task_msg.argv_1;
 							memcpy(p_entitytable_fbk->entitytable_fbk.data, pTask_msg->data, sizeof(p_entitytable_fbk->entitytable_fbk.data));
 							p_entitytable_fbk->entitytable_fbk_wake.set();
 							if (p_entitytable_fbk->entitytable_fbk.table_size > 0)
@@ -530,8 +531,8 @@ void *USBComm_Task_Service_Abc(void *p)
 						{
 							p_entitytable_fbk->entitytable_fbk.cmd_id_rep = Task_msg.cmd_id_rep;
 							p_entitytable_fbk->entitytable_fbk.sub_func = Task_msg.sub_func;
-							p_entitytable_fbk->entitytable_fbk.reply_period = Task_msg.argv0;
-							p_entitytable_fbk->entitytable_fbk.table_size = Task_msg.argv1;
+							p_entitytable_fbk->entitytable_fbk.reply_period = Task_msg.argv_0;
+							p_entitytable_fbk->entitytable_fbk.table_size = Task_msg.argv_1;
 							memcpy(p_entitytable_fbk->entitytable_fbk.data, pTask_msg->data, sizeof(p_entitytable_fbk->entitytable_fbk.data));
 							p_entitytable_fbk->entitytable_fbk_wake.set();
 
@@ -548,6 +549,38 @@ void *USBComm_Task_Service_Abc(void *p)
 								tmp_string += str_entitytab_value;
 								goDriverLogger.Log("debug", str_entitytab_value);
 							}
+						}
+					}
+					else if (Task_msg.cmd_id_rep == RespPositive_EntityPack)
+					{
+						if (Task_msg.sub_func == SubFunc_pack_get)
+						{
+							p_entitypack_fbk->entitypack_fbk.cmd_id_rep = Task_msg.cmd_id_rep;
+							p_entitypack_fbk->entitypack_fbk.sub_func = Task_msg.sub_func;
+							p_entitypack_fbk->entitypack_fbk.pack_size = Task_msg.argv_0;
+							memcpy(p_entitypack_fbk->entitypack_fbk.entity_pack, p_entitypack_msg->entity_pack, sizeof(p_entitypack_msg->entity_pack));
+							p_entitypack_fbk->entitypack_fbk_wake.set();
+
+							if (p_entitypack_fbk->entitypack_fbk.pack_size > 0)
+							{
+								string str_entitypack_value = "";
+								for (int i = 0; i < p_entitypack_fbk->entitypack_fbk.pack_size; i++)
+								{
+									sprintf(str_log, "entity[%d] = %d, ", p_entitypack_fbk->entitypack_fbk.entity_pack[i].entity_name, p_entitypack_fbk->entitypack_fbk.entity_pack[i].entity_value);
+									str_entitypack_value += str_log;
+								}
+								sprintf(str_log, "%s[%d] RespId:0x%02x", __func__, __LINE__, Task_msg.cmd_id_rep);
+								string tmp_string(str_log);
+								tmp_string += str_entitypack_value;
+								goDriverLogger.Log("debug", str_entitypack_value);
+							}
+						}
+						else if (Task_msg.sub_func == SubFunc_pack_set)
+						{
+							p_entitypack_fbk->entitypack_fbk.cmd_id_rep = Task_msg.cmd_id_rep;
+							p_entitypack_fbk->entitypack_fbk.sub_func = Task_msg.sub_func;
+							p_entitypack_fbk->entitypack_fbk.pack_size = Task_msg.argv_0;
+							p_entitypack_fbk->entitypack_fbk_wake.set();
 						}
 					}
 				}
@@ -761,6 +794,7 @@ int usb_message_reset(unsigned char sub_func, unsigned int delay_time)
 	msg_reset.delay_time = delay_time;
 	usb_msg_reset_fbk_t *p_resetfbk = &g_msg_reset_fbk;
 	unsigned long t_start = GetCurrentTime_us();
+	p_resetfbk->reset_fbk_wake.reset();
 	USB_Msg_To_TxBulkBuffer((ptr_usb_msg_u8)&msg_reset, sizeof(usb_msg_reset_t));
 	while (1)
 	{
@@ -839,6 +873,7 @@ int usb_message_profile_get(unsigned char profile_number, usb_msg_profile_t* pro
 	msg_profile.ignore = Dummy_ff;
 	usb_msg_profile_fbk_t *p_profilefbk = &g_msg_profile_fbk;
 	unsigned long t_start = GetCurrentTime_us();
+	p_profilefbk->profile_fbk_wake.reset();
 	USB_Msg_To_TxBulkBuffer((ptr_usb_msg_u8)&msg_profile, 4);
 	while (1)
 	{
@@ -912,6 +947,7 @@ int usb_message_profile_set(unsigned char profile_number, usb_msg_profile_t* pro
 	profile_msg->ignore = Dummy_ff;
 	usb_msg_profile_fbk_t *p_profilefbk = &g_msg_profile_fbk;
 	unsigned long t_start = GetCurrentTime_us();
+	p_profilefbk->profile_fbk_wake.reset();
 	USB_Msg_To_TxBulkBuffer((ptr_usb_msg_u8)profile_msg, sizeof(usb_msg_profile_t));
 
 	while (1)
@@ -953,6 +989,7 @@ int usb_message_log_level_get()
 	log_msg.ignore = Dummy_ff;
 	usb_msg_log_setting_fbk_t *p_logsettingfbk = &g_msg_log_setting_fbk;
 	unsigned long t_start = GetCurrentTime_us();
+	p_logsettingfbk->log_setting_fbk_wake.reset();
 	USB_Msg_To_TxBulkBuffer((ptr_usb_msg_u8)&log_msg, 4);
 
 	while (1)
@@ -994,6 +1031,7 @@ int usb_message_log_level_set(enum LogLev u8_value)
 	log_msg.ignore = Dummy_ff;
 	usb_msg_log_setting_fbk_t *p_logsettingfbk = &g_msg_log_setting_fbk;
 	unsigned long t_start = GetCurrentTime_us();
+	p_logsettingfbk->log_setting_fbk_wake.reset();
 	USB_Msg_To_TxBulkBuffer((ptr_usb_msg_u8)&log_msg, 4);
 
 	while (1)
@@ -1066,6 +1104,99 @@ int usb_message_set_entity_table_reply_mode(int mode)
 	return res;
 }
 
+int usb_message_get_entity_pack(std::vector<ioentity_pack_t> *entities)
+{
+	int res = 0;
+	int res_wake;
+	int nop_trywait_TIMEOUT = 50;
+	usb_msg_entity_pack_t enpack_msg;
+	enpack_msg.cmd_id = Cmd_EntityPack;
+	enpack_msg.sub_func = SubFunc_pack_get;
+	enpack_msg.pack_size = entities->size();
+
+	for (int i = 0; i < entities->size(); i++)
+	{
+		enpack_msg.entity_pack[i].entity_name = (entities->begin() + i)->entity_name;
+		enpack_msg.entity_pack[i].entity_value = 0xff;
+	}
+
+	usb_msg_entitypack_fbk_t *p_entitypack_fbk = &g_msg_entitypack_fbk;
+	p_entitypack_fbk->entitypack_fbk_wake.reset();
+	unsigned long t_start = GetCurrentTime_us();
+	USB_Msg_To_TxBulkBuffer((ptr_usb_msg_u8)&enpack_msg, (enpack_msg.pack_size * 2) + 4);
+	while (1)
+	{
+		res_wake = p_entitypack_fbk->entitypack_fbk_wake.tryWait(nop_trywait_TIMEOUT);
+		if (res_wake == 1)
+		{
+			sprintf(str_log, "%s[%d] RespId:0x%02x, SubFunction:0x%02x,size:%d",
+					__func__, __LINE__,
+					p_entitypack_fbk->entitypack_fbk.cmd_id_rep,
+					p_entitypack_fbk->entitypack_fbk.sub_func,
+					p_entitypack_fbk->entitypack_fbk.pack_size);
+			string tmp_string(str_log);
+			goDriverLogger.Log("info", tmp_string);
+			res = 0;
+		}
+		else
+		{
+			sprintf(str_log, "%s[%d] time out", __func__, __LINE__);
+			string tmp_string(str_log);
+			goDriverLogger.Log("error", tmp_string);
+			res = -1;
+		}
+		break;
+	}
+	printf("get entity-pack reply mode message, escape:%ld ms. \n", (GetCurrentTime_us() - t_start) / 1000);
+	return res;
+}
+
+int usb_message_set_entity_pack(std::vector<ioentity_pack_t> *entities)
+{
+	int res = 0;
+	int res_wake;
+	int nop_trywait_TIMEOUT = 50;
+	usb_msg_entity_pack_t enpack_msg;
+	enpack_msg.cmd_id = Cmd_EntityPack;
+	enpack_msg.sub_func = SubFunc_pack_set;
+	enpack_msg.pack_size = entities->size();
+
+	for (int i = 0; i < entities->size(); i++)
+	{
+		enpack_msg.entity_pack[i].entity_name = (entities->begin() + i)->entity_name;
+		enpack_msg.entity_pack[i].entity_value = (entities->begin() + i)->entity_value;
+	}
+
+	usb_msg_entitypack_fbk_t *p_entitypack_fbk = &g_msg_entitypack_fbk;
+	p_entitypack_fbk->entitypack_fbk_wake.reset();
+	unsigned long t_start = GetCurrentTime_us();
+	USB_Msg_To_TxBulkBuffer((ptr_usb_msg_u8)&enpack_msg, (enpack_msg.pack_size * 2) + 4);
+	while (1)
+	{
+		res_wake = p_entitypack_fbk->entitypack_fbk_wake.tryWait(nop_trywait_TIMEOUT);
+		if (res_wake == 1)
+		{
+			sprintf(str_log, "%s[%d] RespId:0x%02x, SubFunction:0x%02x",
+					__func__, __LINE__,
+					p_entitypack_fbk->entitypack_fbk.cmd_id_rep,
+					p_entitypack_fbk->entitypack_fbk.sub_func);
+			string tmp_string(str_log);
+			goDriverLogger.Log("info", tmp_string);
+			res = 0;
+		}
+		else
+		{
+			sprintf(str_log, "%s[%d] time out", __func__, __LINE__);
+			string tmp_string(str_log);
+			goDriverLogger.Log("error", tmp_string);
+			res = -1;
+		}
+		break;
+	}
+	printf("set entity-pack reply mode message, escape:%ld ms. \n", (GetCurrentTime_us() - t_start) / 1000);
+	return res;
+}
+
 bool USB_Msg_Parser(USB_TaskResp_msg_t *task_msg)
 {
 	usb_msg_u8 msg[MESSAGE_MAX];
@@ -1115,6 +1246,11 @@ bool USB_Msg_Parser(USB_TaskResp_msg_t *task_msg)
 			else if (p_taskmsg->cmd_id_rep == RespPositive_EntityTable)
 			{
 				memcpy(task_msg, (usb_msg_u8 *)msg, sizeof(usb_msg_entitytable_reply_t));
+				b_new_msg = true;
+			}
+			else if (p_taskmsg->cmd_id_rep == RespPositive_EntityPack)
+			{
+				memcpy(task_msg, (usb_msg_u8 *)msg, sizeof(usb_msg_entity_pack_reply_t));
 				b_new_msg = true;
 			}
 		}
