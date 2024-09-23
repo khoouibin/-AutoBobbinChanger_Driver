@@ -505,50 +505,27 @@ void *USBComm_Task_Service_Abc(void *p)
 					}
 					else if (Task_msg.cmd_id_rep == RespPositive_EntityTable)
 					{
-						if (Task_msg.sub_func == SubFunc_table_get_instant || Task_msg.sub_func == SubFunc_table_get_off)
-						{
-							p_entitytable_fbk->entitytable_fbk.cmd_id_rep = Task_msg.cmd_id_rep;
-							p_entitytable_fbk->entitytable_fbk.sub_func = Task_msg.sub_func;
-							p_entitytable_fbk->entitytable_fbk.reply_period = Task_msg.argv_0;
-							p_entitytable_fbk->entitytable_fbk.table_size = Task_msg.argv_1;
-							memcpy(p_entitytable_fbk->entitytable_fbk.data, pTask_msg->data, sizeof(p_entitytable_fbk->entitytable_fbk.data));
-							p_entitytable_fbk->entitytable_fbk_wake.set();
-							if (p_entitytable_fbk->entitytable_fbk.table_size > 0)
-							{
-								string str_entitytab_value = "";
-								for (int i = 0; i < p_entitytable_fbk->entitytable_fbk.table_size; i++)
-								{
-									sprintf(str_log, "0x%02x, ", p_entitytable_fbk->entitytable_fbk.data[i]);
-									str_entitytab_value += str_log;
-								}
-								sprintf(str_log, "%s[%d] RespId:0x%02x", __func__, __LINE__, Task_msg.cmd_id_rep);
-								string tmp_string(str_log);
-								tmp_string += str_entitytab_value;
-								goDriverLogger.Log("debug", str_entitytab_value);
-							}
-						}
-						else if (Task_msg.sub_func == SubFunc_table_get_changed || Task_msg.sub_func == SubFunc_table_get_period)
-						{
-							p_entitytable_fbk->entitytable_fbk.cmd_id_rep = Task_msg.cmd_id_rep;
-							p_entitytable_fbk->entitytable_fbk.sub_func = Task_msg.sub_func;
-							p_entitytable_fbk->entitytable_fbk.reply_period = Task_msg.argv_0;
-							p_entitytable_fbk->entitytable_fbk.table_size = Task_msg.argv_1;
-							memcpy(p_entitytable_fbk->entitytable_fbk.data, pTask_msg->data, sizeof(p_entitytable_fbk->entitytable_fbk.data));
-							p_entitytable_fbk->entitytable_fbk_wake.set();
+						p_entitytable_fbk->entitytable_fbk.cmd_id_rep = Task_msg.cmd_id_rep;
+						p_entitytable_fbk->entitytable_fbk.sub_func = Task_msg.sub_func;
+						p_entitytable_fbk->entitytable_fbk.reply_period = Task_msg.argv_0;
+						p_entitytable_fbk->entitytable_fbk.table_size = Task_msg.argv_1;
+						memcpy(p_entitytable_fbk->entitytable_fbk.data, pTask_msg->data, sizeof(p_entitytable_fbk->entitytable_fbk.data));
+						p_entitytable_fbk->entitytable_fbk_wake.set();
 
-							if (p_entitytable_fbk->entitytable_fbk.table_size > 0)
+						if (p_entitytable_fbk->entitytable_fbk.table_size > 0)
+						{
+							string str_entitytab_value = " ";
+							std::stringstream ss;
+							for (int i = 0; i < p_entitytable_fbk->entitytable_fbk.table_size; i++)
 							{
-								string str_entitytab_value = "";
-								for (int i = 0; i < p_entitytable_fbk->entitytable_fbk.table_size; i++)
-								{
-									sprintf(str_log, "0x%02x, ", p_entitytable_fbk->entitytable_fbk.data[i]);
-									str_entitytab_value += str_log;
-								}
-								sprintf(str_log, "%s[%d] RespId:0x%02x", __func__, __LINE__, Task_msg.cmd_id_rep);
-								string tmp_string(str_log);
-								tmp_string += str_entitytab_value;
-								goDriverLogger.Log("debug", str_entitytab_value);
+								ss.str("");
+								ss << std::hex << std::setw(2) << setfill('0') << (int)p_entitytable_fbk->entitytable_fbk.data[i];
+								str_entitytab_value += ss.str() + " ";
 							}
+							sprintf(str_log, "%s[%d] RespId:0x%02x,", __func__, __LINE__, Task_msg.cmd_id_rep);
+							string tmp_string(str_log);
+							tmp_string += str_entitytab_value;
+							goDriverLogger.Log("debug", tmp_string);
 						}
 					}
 					else if (Task_msg.cmd_id_rep == RespPositive_EntityPack)
@@ -563,16 +540,17 @@ void *USBComm_Task_Service_Abc(void *p)
 
 							if (p_entitypack_fbk->entitypack_fbk.pack_size > 0)
 							{
-								string str_entitypack_value = "";
+								string str_entitypack_value = " ";
 								for (int i = 0; i < p_entitypack_fbk->entitypack_fbk.pack_size; i++)
 								{
-									sprintf(str_log, "entity[%d] = %d, ", p_entitypack_fbk->entitypack_fbk.entity_pack[i].entity_name, p_entitypack_fbk->entitypack_fbk.entity_pack[i].entity_value);
-									str_entitypack_value += str_log;
+									str_entitypack_value += "entity[" +
+															std::to_string(p_entitypack_fbk->entitypack_fbk.entity_pack[i].entity_name) +
+															"]=" + std::to_string(p_entitypack_fbk->entitypack_fbk.entity_pack[i].entity_value) + ",";
 								}
 								sprintf(str_log, "%s[%d] RespId:0x%02x", __func__, __LINE__, Task_msg.cmd_id_rep);
 								string tmp_string(str_log);
 								tmp_string += str_entitypack_value;
-								goDriverLogger.Log("debug", str_entitypack_value);
+								goDriverLogger.Log("debug", tmp_string);
 							}
 						}
 						else if (Task_msg.sub_func == SubFunc_pack_set)
@@ -1077,7 +1055,6 @@ int usb_message_set_entity_table_reply_mode(int mode)
 	USB_Msg_To_TxBulkBuffer((ptr_usb_msg_u8)&entab_msg, 4);
 	while (1)
 	{
-
 		res_wake = p_entitytable_fbk->entitytable_fbk_wake.tryWait(nop_trywait_TIMEOUT);
 		if (res_wake == 1)
 		{
