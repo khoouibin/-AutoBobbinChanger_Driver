@@ -21,6 +21,7 @@ usb_msg_profile_fbk_t g_msg_profile_fbk;
 usb_msg_log_setting_fbk_t g_msg_log_setting_fbk;
 usb_msg_entitytable_fbk_t g_msg_entitytable_fbk;
 usb_msg_entitypack_fbk_t g_msg_entitypack_fbk;
+usb_msg_z_pulse_gen_fbk_t g_msg_z_pulse_gen_fbk;
 
 char str_log[256];
 char libusb_error_string[64];
@@ -441,6 +442,7 @@ void *USBComm_Task_Service_Abc(void *p)
 	usb_msg_entitytable_fbk_t *p_entitytable_fbk = &g_msg_entitytable_fbk;
 	usb_msg_entitypack_fbk_t *p_entitypack_fbk = &g_msg_entitypack_fbk;
 	usb_msg_entity_pack_t* p_entitypack_msg=(usb_msg_entity_pack_t*)&Task_msg;
+	usb_msg_z_pulse_gen_fbk_t *p_z_pulse_gen_fbk = &g_msg_z_pulse_gen_fbk;
 
 	pthread_detach(pthread_self());
 	while (g_b_USBComm_Task_run == true)
@@ -560,6 +562,12 @@ void *USBComm_Task_Service_Abc(void *p)
 							p_entitypack_fbk->entitypack_fbk.pack_size = Task_msg.argv_0;
 							p_entitypack_fbk->entitypack_fbk_wake.set();
 						}
+					}
+					else if (Task_msg.cmd_id_rep == RespPositive_Z_PulseGen)
+					{
+						p_z_pulse_gen_fbk->z_pulse_gen_fbk.cmd_id_rep = Task_msg.cmd_id_rep;
+						p_z_pulse_gen_fbk->z_pulse_gen_fbk.sub_func = Task_msg.sub_func;
+						p_z_pulse_gen_fbk->z_pulse_gen_fbk_wake.set();
 					}
 				}
 				res = 0;
@@ -1174,6 +1182,78 @@ int usb_message_set_entity_pack(std::vector<ioentity_pack_t> *entities)
 	return res;
 }
 
+int z_rpm_pulse_value_converter(int z_rpm, int z_pulse_per_round, int *period_hiword, int *period_loword, int *dutyon_hiword, int *dutyon_loword)
+{
+	int iFcy = 60e6;
+	int z_pulse_period, z_pulse_dutyon;
+
+	if (z_rpm <= 0)
+		return -1;
+	z_pulse_period = iFcy / z_rpm / z_pulse_per_round;
+	z_pulse_period *= 60;
+	z_pulse_dutyon = z_pulse_period / 2;
+	*period_hiword = (z_pulse_period >> 16) & 0xffff;
+	*period_loword = (z_pulse_period) & 0xffff;
+	*dutyon_hiword = (z_pulse_dutyon >> 16) & 0xffff;
+	*dutyon_loword = (z_pulse_dutyon) & 0xffff;
+	return 0;
+}
+
+int usb_message_set_z_pulse_gen(int z_rpm)
+{
+	int res;
+	int res_wake;
+	int nop_trywait_TIMEOUT = 50;
+	int w, x, y, z;
+	usb_msg_z_pulse_gen_t z_pulse_gen_msg;
+	z_pulse_gen_msg.cmd_id = Cmd_Z_PulseGen;
+	z_pulse_gen_msg.sub_func = (z_rpm == 0) ? SubFunc_z_pulse_gen_off : SubFunc_z_pulse_gen_pwm;
+
+	if (z_rpm_pulse_value_converter(z_rpm, 500, &w, &x, &y, &z) == -1)
+	{
+		z_pulse_gen_msg.z_pwm_value.period_hiword = 0;
+		z_pulse_gen_msg.z_pwm_value.period_loword = 0;
+		z_pulse_gen_msg.z_pwm_value.dutyon_hiword = 0;
+		z_pulse_gen_msg.z_pwm_value.dutyon_loword = 0;
+	}
+	else
+	{
+		z_pulse_gen_msg.z_pwm_value.period_hiword = (UINT_16)w;
+		z_pulse_gen_msg.z_pwm_value.period_loword = (UINT_16)x;
+		z_pulse_gen_msg.z_pwm_value.dutyon_hiword = (UINT_16)y;
+		z_pulse_gen_msg.z_pwm_value.dutyon_loword = (UINT_16)z;
+	}
+
+	usb_msg_z_pulse_gen_fbk_t *p_z_pulse_gen_fbk = &g_msg_z_pulse_gen_fbk;
+	p_z_pulse_gen_fbk->z_pulse_gen_fbk_wake.reset();
+	unsigned long t_start = GetCurrentTime_us();
+	USB_Msg_To_TxBulkBuffer((ptr_usb_msg_u8)&z_pulse_gen_msg, 12);
+	while (1)
+	{
+		res_wake = p_z_pulse_gen_fbk->z_pulse_gen_fbk_wake.tryWait(nop_trywait_TIMEOUT);
+		if (res_wake == 1)
+		{
+			sprintf(str_log, "%s[%d] RespId:0x%02x, SubFunction:0x%02x",
+					__func__, __LINE__,
+					p_z_pulse_gen_fbk->z_pulse_gen_fbk.cmd_id_rep,
+					p_z_pulse_gen_fbk->z_pulse_gen_fbk.sub_func);
+			string tmp_string(str_log);
+			goDriverLogger.Log("info", tmp_string);
+			res = 0;
+		}
+		else
+		{
+			sprintf(str_log, "%s[%d] time out", __func__, __LINE__);
+			string tmp_string(str_log);
+			goDriverLogger.Log("error", tmp_string);
+			res = -1;
+		}
+		break;
+	}
+	printf("set entity-table reply mode message, escape:%ld ms. \n", (GetCurrentTime_us() - t_start) / 1000);
+	return res;
+}
+
 bool USB_Msg_Parser(USB_TaskResp_msg_t *task_msg)
 {
 	usb_msg_u8 msg[MESSAGE_MAX];
@@ -1228,6 +1308,11 @@ bool USB_Msg_Parser(USB_TaskResp_msg_t *task_msg)
 			else if (p_taskmsg->cmd_id_rep == RespPositive_EntityPack)
 			{
 				memcpy(task_msg, (usb_msg_u8 *)msg, sizeof(usb_msg_entity_pack_reply_t));
+				b_new_msg = true;
+			}
+			else if (p_taskmsg->cmd_id_rep == RespPositive_Z_PulseGen)
+			{
+				memcpy(task_msg, (usb_msg_u8 *)msg, sizeof(usb_msg_z_pulse_gen_reply_t));
 				b_new_msg = true;
 			}
 		}

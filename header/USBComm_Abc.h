@@ -63,6 +63,7 @@ enum Protocol_Command
 	Cmd_Log = 0x03,
 	Cmd_EntityTable = 0x04,
 	Cmd_EntityPack = 0x05,
+	Cmd_Z_PulseGen = 0x06,
 	Cmd_MAX,
 };
 
@@ -74,6 +75,7 @@ enum Protocol_PositiveResponse
 	RespPositive_Log = 0x43,
 	RespPositive_EntityTable = 0x44,
 	RespPositive_EntityPack = 0x45,
+	RespPositive_Z_PulseGen = 0x46,
 };
 
 enum Protocol_NegativeResponse
@@ -140,6 +142,14 @@ enum EntityPack_SubFunc
 	SubFunc_pack_get = 1,
 	SubFunc_pack_set = 2,
 	SubFunc_entitypack_max,
+};
+
+enum Z_PulseGen_SubFunc
+{
+	SubFunc_z_pulse_gen_off = 0,
+	SubFunc_z_pulse_gen_rpm = 1,
+	SubFunc_z_pulse_gen_pwm = 2,
+	SubFunc_z_pulse_gen_max,
 };
 
 enum Reponse_Code
@@ -399,6 +409,84 @@ typedef struct
 	Poco::Event entitypack_fbk_wake;
 } usb_msg_entitypack_fbk_t;
 
+typedef struct
+{
+	UINT_16 period_hiword;
+	UINT_16 period_loword;
+	UINT_16 dutyon_hiword;
+	UINT_16 dutyon_loword;
+} z_pulse_width_modulation_t;
+
+enum Zrpm
+{
+	z_100rpm = 0,
+	z_200rpm = 1,
+	z_300rpm = 2,
+	z_400rpm = 3,
+	z_500rpm = 4,
+	z_600rpm = 5,
+	z_700rpm = 6,
+	z_800rpm = 7,
+	z_900rpm = 8,
+	z_1000rpm = 9,
+	z_1100rpm = 10,
+	z_1200rpm = 11,
+	z_1300rpm = 12,
+	z_1400rpm = 13,
+	z_1500rpm = 14,
+	z_1600rpm = 15,
+	z_1700rpm = 16,
+	z_1800rpm = 17,
+	z_1900rpm = 18,
+	z_2000rpm = 19,
+	z_2100rpm = 20,
+	z_2200rpm = 21,
+	z_2300rpm = 22,
+	z_2400rpm = 23,
+	z_2500rpm = 24,
+	z_2600rpm = 25,
+	z_2700rpm = 26,
+	z_2800rpm = 27,
+	z_2900rpm = 28,
+	z_3000rpm = 29,
+	z_3100rpm = 30,
+	z_3200rpm = 31,
+	z_3300rpm = 32,
+	z_3400rpm = 33,
+	z_3500rpm = 34,
+	z_3600rpm = 35,
+	z_rpm_max,
+};
+
+typedef struct
+{
+	enum Zrpm z_rpm_enum;
+} z_pulse_rpm_enum_t;
+
+typedef struct
+{
+	unsigned char cmd_id;
+	unsigned char sub_func;
+	unsigned char argv_0;
+	unsigned char argv_1;
+	z_pulse_width_modulation_t z_pwm_value;
+	z_pulse_rpm_enum_t z_rpm_value;
+} usb_msg_z_pulse_gen_t;
+
+typedef struct
+{
+	unsigned char cmd_id_rep;
+	unsigned char sub_func;
+	unsigned char argv_0;
+	unsigned char argv_1;
+} usb_msg_z_pulse_gen_reply_t;
+
+typedef struct
+{
+	usb_msg_z_pulse_gen_reply_t z_pulse_gen_fbk;
+	Poco::Event z_pulse_gen_fbk_wake;
+} usb_msg_z_pulse_gen_fbk_t;
+
 // should be create a profile.h to collect below.
 typedef struct
 {
@@ -474,4 +562,7 @@ int usb_message_log_level_set(enum LogLev u8_value);
 int usb_message_set_entity_table_reply_mode(int mode);
 int usb_message_get_entity_pack(std::vector<ioentity_pack_t> *entities);
 int usb_message_set_entity_pack(std::vector<ioentity_pack_t> *entities);
+
+int usb_message_set_z_pulse_gen(int z_rpm);
+
 #endif

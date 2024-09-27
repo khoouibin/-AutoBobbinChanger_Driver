@@ -331,6 +331,29 @@ void CommandLineInterface()
                  printf("usb cmd  wrong, try again.\n");
             }
         }
+        else if (cmd == "z-rpm")
+        {
+            // int t_period_h,t_period_l;
+            // int t_dutyon_h,t_dutyon_l;
+            // z_rpm_pulse_value_converter(1,500,&t_period_h,&t_period_l,&t_dutyon_h,&t_dutyon_l);
+            // printf("period:[0x%04x, 0x%04x], dutyon:[0x%04x, 0x%04x]",t_period_h,t_period_l,t_dutyon_h,t_dutyon_l);
+            if (v.size() >= 2)
+            {
+                try
+                {
+                    int z_rpm_cmd = std::stoi(v[1]);
+                    usb_message_set_z_pulse_gen(z_rpm_cmd);
+                }
+                catch (const std::exception &e)
+                {
+                    std::cout << "echo message, exception:" << e.what() << '\n';
+                }
+            }
+            else
+            {
+                printf("usb cmd  wrong, try again.\n");
+            }
+        }
         else if (cmd == "tcp")
         {
             int res;
