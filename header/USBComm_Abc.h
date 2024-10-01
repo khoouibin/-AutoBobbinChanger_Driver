@@ -64,6 +64,7 @@ enum Protocol_Command
 	Cmd_EntityTable = 0x04,
 	Cmd_EntityPack = 0x05,
 	Cmd_Z_PulseGen = 0x06,
+	Cmd_X_PulseGen = 0x07,
 	Cmd_MAX,
 };
 
@@ -76,6 +77,7 @@ enum Protocol_PositiveResponse
 	RespPositive_EntityTable = 0x44,
 	RespPositive_EntityPack = 0x45,
 	RespPositive_Z_PulseGen = 0x46,
+	RespPositive_X_PulseGen = 0x47,
 };
 
 enum Protocol_NegativeResponse
@@ -150,6 +152,13 @@ enum Z_PulseGen_SubFunc
 	SubFunc_z_pulse_gen_rpm = 1,
 	SubFunc_z_pulse_gen_pwm = 2,
 	SubFunc_z_pulse_gen_max,
+};
+
+enum X_PulseGen_SubFunc
+{
+	SubFunc_x_pulsemode_run_stop = 0,
+	SubFunc_x_pulsemode_trapezoid = 1,
+	SubFunc_x_pulsemode_max,
 };
 
 enum Reponse_Code
@@ -487,6 +496,48 @@ typedef struct
 	Poco::Event z_pulse_gen_fbk_wake;
 } usb_msg_z_pulse_gen_fbk_t;
 
+typedef union
+{
+	UINT_32 u32;
+	UINT_16 u16[2];
+    UCHAR_8 u8[4];
+}
+OCx_pulse_count_type_t;
+
+typedef struct
+{
+    OCx_pulse_count_type_t period;
+    OCx_pulse_count_type_t dutyon;
+} OCx_sequence_t;
+
+typedef struct
+{
+    OCx_sequence_t cx[2];
+    OCx_sequence_t cx_last;
+} OCx_src_t;
+
+typedef struct
+{
+	unsigned char cmd_id;
+	unsigned char sub_func;
+	unsigned short steps;
+	OCx_src_t x_sequence;
+} usb_msg_x_pulse_gen_t;
+
+typedef struct
+{
+	unsigned char cmd_id_rep;
+	unsigned char sub_func;
+	unsigned char argv_0;
+	unsigned char argv_1;
+} usb_msg_x_pulse_gen_reply_t;
+
+typedef struct
+{
+	usb_msg_x_pulse_gen_reply_t x_pulse_gen_fbk;
+	Poco::Event x_pulse_gen_fbk_wake;
+} usb_msg_x_pulse_gen_fbk_t;
+
 // should be create a profile.h to collect below.
 typedef struct
 {
@@ -564,5 +615,6 @@ int usb_message_get_entity_pack(std::vector<ioentity_pack_t> *entities);
 int usb_message_set_entity_pack(std::vector<ioentity_pack_t> *entities);
 
 int usb_message_set_z_pulse_gen(int z_rpm);
+int usb_message_set_x_pulse_gen(int pulse_mode,int spr, int steps, int max_rpm);
 
 #endif

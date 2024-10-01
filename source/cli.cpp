@@ -20,6 +20,31 @@
 
 using namespace std;
 
+// int x_trapezoid_pulse_gen(int max_rpm, int spr, OCx_src_t *ocx_scr)
+// {
+//     int iFcy = 60e6;
+//     int max_rpm_period_cnt = (int)(((long)iFcy * 60) / (long)spr / (long)max_rpm);
+//     float accel = (float)max_rpm / 14;
+//     accel = (accel < 5) ? 5 : accel;
+
+//     int cx0, cx1, den, num;
+//     ocx_scr->cx[0].period.u32 = (int)((float)(((long)iFcy * 60) / (long)spr) / accel);
+//     ocx_scr->cx[0].dutyon.u32 = (ocx_scr->cx[0].period.u32) >> 1;
+
+//     cx0 = ocx_scr->cx[0].period.u32;
+//     num = cx0 + cx0;
+//     den = 5;
+//     cx1 = num / den;
+//     cx1 = cx0 - cx1;
+//     cx1 = (int)((float)cx1 / 1.46);
+
+//     ocx_scr->cx[1].period.u32 = cx1;
+//     ocx_scr->cx[1].dutyon.u32 = cx1 >> 1;
+//     ocx_scr->cx_last.period.u32 = max_rpm_period_cnt;
+//     ocx_scr->cx_last.dutyon.u32 = max_rpm_period_cnt >> 1;
+//     return 0;
+// }
+
 vector<string> split(string s, string delimiter)
 {
     size_t pos_start = 0, pos_end, delim_len = delimiter.length();
@@ -352,6 +377,22 @@ void CommandLineInterface()
             else
             {
                 printf("usb cmd  wrong, try again.\n");
+            }
+        }
+        else if (cmd == "x-jmp")
+        {
+            if (v.size() >= 3)
+            {
+                try
+                {
+                    int steps = std::stoi(v[1]);
+                    int maxrpm = std::stoi(v[2]);
+                    usb_message_set_x_pulse_gen(1, 1600, steps, maxrpm);
+                }
+                catch (const std::exception &e)
+                {
+                    std::cout << "echo message, exception:" << e.what() << '\n';
+                }
             }
         }
         else if (cmd == "tcp")
