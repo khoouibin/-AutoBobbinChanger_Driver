@@ -1278,7 +1278,7 @@ int x_trapezoid_pulse_gen(int max_rpm, int spr, OCx_src_t *ocx_scr)
     den = 5;
     cx1 = num / den;
     cx1 = cx0 - cx1;
-    cx1 = (int)((float)cx1 / 1.46);
+    cx1 = (int)((float)cx1 / 1.4485289);
 
     ocx_scr->cx[1].period.u32 = cx1;
     ocx_scr->cx[1].dutyon.u32 = cx1 >> 1;
