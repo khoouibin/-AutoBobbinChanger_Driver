@@ -20,31 +20,6 @@
 
 using namespace std;
 
-// int x_trapezoid_pulse_gen(int max_rpm, int spr, OCx_src_t *ocx_scr)
-// {
-//     int iFcy = 60e6;
-//     int max_rpm_period_cnt = (int)(((long)iFcy * 60) / (long)spr / (long)max_rpm);
-//     float accel = (float)max_rpm / 14;
-//     accel = (accel < 5) ? 5 : accel;
-
-//     int cx0, cx1, den, num;
-//     ocx_scr->cx[0].period.u32 = (int)((float)(((long)iFcy * 60) / (long)spr) / accel);
-//     ocx_scr->cx[0].dutyon.u32 = (ocx_scr->cx[0].period.u32) >> 1;
-
-//     cx0 = ocx_scr->cx[0].period.u32;
-//     num = cx0 + cx0;
-//     den = 5;
-//     cx1 = num / den;
-//     cx1 = cx0 - cx1;
-//     cx1 = (int)((float)cx1 / 1.46);
-
-//     ocx_scr->cx[1].period.u32 = cx1;
-//     ocx_scr->cx[1].dutyon.u32 = cx1 >> 1;
-//     ocx_scr->cx_last.period.u32 = max_rpm_period_cnt;
-//     ocx_scr->cx_last.dutyon.u32 = max_rpm_period_cnt >> 1;
-//     return 0;
-// }
-
 vector<string> split(string s, string delimiter)
 {
     size_t pos_start = 0, pos_end, delim_len = delimiter.length();
@@ -67,8 +42,22 @@ vector<string> helper_doc(void)
     vector<string> doc;
     doc.push_back(" common command:");
     doc.push_back(" -----------------------------------------------------------------");
-    doc.push_back(" 'usb list'                   : get usb device list. ");
-    doc.push_back(" 'usb auto_open'              : open UsbDevice ONS_RTC/BL_RTC auto-select. ");
+    doc.push_back(" 'usb list'                                        : get usb device list");
+    doc.push_back(" 'echo'                                            : usb message handler test");
+    doc.push_back(" 'reset'                                           : reset abc-rtc mcu");
+    doc.push_back(" 'reset [delay_time]'                              : reset abc-rtc mcu after delay_time(ms)");
+    doc.push_back(" 'get-profile01'                                   : read rtc-profile01, demo(not yet define), data struct u8/u16/u32");
+    doc.push_back(" 'set-profile01'                                   : set rtc-profile01, demo(not yet define), data struct u8/u16/u32");
+    doc.push_back(" 'entab-mode [mode]'                               : set entity-table mode");
+    doc.push_back("             mode = 0 : reply off");
+    doc.push_back("             mode = 1 : reply instant");
+    doc.push_back("             mode = 2 : reply period ");
+    doc.push_back("             mode = 3 : reply if changed, pulse/dir ignored");
+    doc.push_back(" 'en-get [en_num_0]...[en_num_29]'                 : get entity_number status, maximum 30 entities");
+    doc.push_back(" 'en-set [en_num_0] [value]...[en_num_29] [value]' : get entity_number status, maximum 30 entities, value: 0/1");
+    doc.push_back(" 'z-rpm [rpm]                                      : rpm =0 , no pulse output(pin z_step)");
+    doc.push_back("                                                   : rpm range: 0~3800");
+    doc.push_back(" 'x-jmp [steps] [max_rpm]                          : generate a trapezoid_pulse, rpm: 5 ~ 200");
     doc.push_back(" ");
     doc.push_back(" Press 'q' to quit.");
 
@@ -334,8 +323,14 @@ void CommandLineInterface()
             ioentity_pack_t entity_tmp;
             vector<ioentity_pack_t> entities;
 
-            if (v.size() >= 2)
+            if (v.size() >= 3)
             {
+                int entity_pairs = v.size() -1;
+                if (entity_pairs%2 != 0)
+                {
+                    printf("usb cmd  wrong, try again.\n");
+                    continue;
+                }
                 try
                 {
                     for(int i = 1; i<v.size(); i+=2)
@@ -353,7 +348,7 @@ void CommandLineInterface()
             }
             else
             {
-                 printf("usb cmd  wrong, try again.\n");
+                printf("usb cmd  wrong, try again.\n");
             }
         }
         else if (cmd == "z-rpm")
@@ -388,6 +383,21 @@ void CommandLineInterface()
                     int steps = std::stoi(v[1]);
                     int maxrpm = std::stoi(v[2]);
                     usb_message_set_x_pulse_gen(1, 1600, steps, maxrpm);
+                }
+                catch (const std::exception &e)
+                {
+                    std::cout << "echo message, exception:" << e.what() << '\n';
+                }
+            }
+        }
+        else if (cmd == "rtc-mode")
+        {
+            if (v.size() >= 2)
+            {
+                try
+                {
+                    int rtc_mode = std::stoi(v[1]);
+                    usb_message_control_mode_switch(rtc_mode);
                 }
                 catch (const std::exception &e)
                 {

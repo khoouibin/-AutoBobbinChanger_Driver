@@ -23,6 +23,7 @@ usb_msg_entitytable_fbk_t g_msg_entitytable_fbk;
 usb_msg_entitypack_fbk_t g_msg_entitypack_fbk;
 usb_msg_z_pulse_gen_fbk_t g_msg_z_pulse_gen_fbk;
 usb_msg_x_pulse_gen_fbk_t g_msg_x_pulse_gen_fbk;
+usb_msg_control_mode_switch_fbk_t g_msg_control_mode_switch_fbk;
 
 char str_log[256];
 char libusb_error_string[64];
@@ -445,6 +446,7 @@ void *USBComm_Task_Service_Abc(void *p)
 	usb_msg_entity_pack_t* p_entitypack_msg=(usb_msg_entity_pack_t*)&Task_msg;
 	usb_msg_z_pulse_gen_fbk_t *p_z_pulse_gen_fbk = &g_msg_z_pulse_gen_fbk;
 	usb_msg_x_pulse_gen_fbk_t *p_x_pulse_gen_fbk = &g_msg_x_pulse_gen_fbk;
+	usb_msg_control_mode_switch_fbk_t *p_mode_switch_fbk = &g_msg_control_mode_switch_fbk;
 
 	pthread_detach(pthread_self());
 	while (g_b_USBComm_Task_run == true)
@@ -576,6 +578,14 @@ void *USBComm_Task_Service_Abc(void *p)
 						p_x_pulse_gen_fbk->x_pulse_gen_fbk.cmd_id_rep = Task_msg.cmd_id_rep;
 						p_x_pulse_gen_fbk->x_pulse_gen_fbk.sub_func = Task_msg.sub_func;
 						p_x_pulse_gen_fbk->x_pulse_gen_fbk_wake.set();
+					}
+					else if (Task_msg.cmd_id_rep == RespPositive_ControlModeSwitch)
+					{
+						p_mode_switch_fbk->control_mode_switch_fbk.cmd_id_rep = Task_msg.cmd_id_rep;
+						p_mode_switch_fbk->control_mode_switch_fbk.sub_func = Task_msg.sub_func;
+						p_mode_switch_fbk->control_mode_switch_fbk.control_status = Task_msg.argv_0;
+						p_mode_switch_fbk->control_mode_switch_fbk.switch_status = Task_msg.argv_1;
+						p_mode_switch_fbk->control_mode_switch_fbk_wake.set();
 					}
 				}
 				res = 0;
@@ -1336,6 +1346,49 @@ int usb_message_set_x_pulse_gen(int pulse_mode, int spr, int steps, int max_rpm)
 	return res;
 }
 
+int usb_message_control_mode_switch(int rtc_control_mode)
+{
+	int res;
+	int res_wake;
+	int nop_trywait_TIMEOUT = 50;
+	usb_msg_control_mode_switch_t mode_switch_msg;
+	mode_switch_msg.cmd_id = Cmd_ControlModeSwitch;
+	mode_switch_msg.argv_0 = Dummy_00;
+	mode_switch_msg.argv_1 = Dummy_00;
+	mode_switch_msg.sub_func = (unsigned char)rtc_control_mode;
+
+	usb_msg_control_mode_switch_fbk_t *p_mode_switch_fbk = &g_msg_control_mode_switch_fbk;
+	p_mode_switch_fbk->control_mode_switch_fbk_wake.reset();
+	unsigned long t_start = GetCurrentTime_us();
+	USB_Msg_To_TxBulkBuffer((ptr_usb_msg_u8)&mode_switch_msg, 4);
+	while (1)
+	{
+		res_wake = p_mode_switch_fbk->control_mode_switch_fbk_wake.tryWait(nop_trywait_TIMEOUT);
+		if (res_wake == 1)
+		{
+			sprintf(str_log, "%s[%d] RespId:0x%02x, SubFunc:0x%02x, control_state:%d,switch_state:%d",
+					__func__, __LINE__,
+					p_mode_switch_fbk->control_mode_switch_fbk.cmd_id_rep,
+					p_mode_switch_fbk->control_mode_switch_fbk.sub_func,
+					p_mode_switch_fbk->control_mode_switch_fbk.control_status,
+					p_mode_switch_fbk->control_mode_switch_fbk.switch_status);
+			string tmp_string(str_log);
+			goDriverLogger.Log("info", tmp_string);
+			res = 0;
+		}
+		else
+		{
+			sprintf(str_log, "%s[%d] time out", __func__, __LINE__);
+			string tmp_string(str_log);
+			goDriverLogger.Log("error", tmp_string);
+			res = -1;
+		}
+		break;
+	}
+	printf("set rtc_control_mode switch reply mode message, escape:%ld ms. \n", (GetCurrentTime_us() - t_start) / 1000);
+	return res;
+}
+
 bool USB_Msg_Parser(USB_TaskResp_msg_t *task_msg)
 {
 	usb_msg_u8 msg[MESSAGE_MAX];
@@ -1400,6 +1453,11 @@ bool USB_Msg_Parser(USB_TaskResp_msg_t *task_msg)
 			else if (p_taskmsg->cmd_id_rep == RespPositive_X_PulseGen)
 			{
 				memcpy(task_msg, (usb_msg_u8 *)msg, sizeof(usb_msg_x_pulse_gen_reply_t));
+				b_new_msg = true;
+			}
+			else if (p_taskmsg->cmd_id_rep == RespPositive_ControlModeSwitch)
+			{
+				memcpy(task_msg, (usb_msg_u8 *)msg, sizeof(usb_msg_control_mode_switch_reply_t));
 				b_new_msg = true;
 			}
 		}
