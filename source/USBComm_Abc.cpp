@@ -24,6 +24,7 @@ usb_msg_entitypack_fbk_t g_msg_entitypack_fbk;
 usb_msg_z_pulse_gen_fbk_t g_msg_z_pulse_gen_fbk;
 usb_msg_x_pulse_gen_fbk_t g_msg_x_pulse_gen_fbk;
 usb_msg_control_mode_switch_fbk_t g_msg_control_mode_switch_fbk;
+usb_msg_home_parts_fbk_t g_msg_home_parts_fbk;
 
 char str_log[256];
 char libusb_error_string[64];
@@ -447,6 +448,8 @@ void *USBComm_Task_Service_Abc(void *p)
 	usb_msg_z_pulse_gen_fbk_t *p_z_pulse_gen_fbk = &g_msg_z_pulse_gen_fbk;
 	usb_msg_x_pulse_gen_fbk_t *p_x_pulse_gen_fbk = &g_msg_x_pulse_gen_fbk;
 	usb_msg_control_mode_switch_fbk_t *p_mode_switch_fbk = &g_msg_control_mode_switch_fbk;
+	usb_msg_home_parts_fbk_t *p_home_parts_fbk = &g_msg_home_parts_fbk;
+	usb_msg_home_parts_reply_t* pHome_parts_reply=(usb_msg_home_parts_reply_t*)&Task_msg;
 
 	pthread_detach(pthread_self());
 	while (g_b_USBComm_Task_run == true)
@@ -586,6 +589,26 @@ void *USBComm_Task_Service_Abc(void *p)
 						p_mode_switch_fbk->control_mode_switch_fbk.control_status = Task_msg.argv_0;
 						p_mode_switch_fbk->control_mode_switch_fbk.switch_status = Task_msg.argv_1;
 						p_mode_switch_fbk->control_mode_switch_fbk_wake.set();
+					}
+					else if (Task_msg.cmd_id_rep == RespPositive_HomeParts)
+					{
+						if (pHome_parts_reply->sub_func ==SubFunc_home_LECPA_100_polling_reply)
+						{
+							sprintf(str_log, "%s[%d] subf:0x%02x, routine:0x%02x, state:%d", __func__, __LINE__,
+									pHome_parts_reply->sub_func,
+									pHome_parts_reply->home_routine,
+									(char)pHome_parts_reply->home_state);
+							string tmp_string(str_log);
+							goDriverLogger.Log("debug", tmp_string);
+						}
+						else if (pHome_parts_reply->sub_func == SubFunc_home_LECPA_100)
+						{
+							p_home_parts_fbk->home_parts_fbk.cmd_id_rep = pHome_parts_reply->cmd_id_rep;
+							p_home_parts_fbk->home_parts_fbk.sub_func = pHome_parts_reply->sub_func;
+							p_home_parts_fbk->home_parts_fbk.home_routine = pHome_parts_reply->home_routine;
+							p_home_parts_fbk->home_parts_fbk.home_state = pHome_parts_reply->home_state;
+							p_home_parts_fbk->home_parts_fbk_wake.set();
+						}
 					}
 				}
 				res = 0;
@@ -1196,7 +1219,7 @@ int usb_message_set_entity_pack(std::vector<ioentity_pack_t> *entities)
 		}
 		break;
 	}
-	printf("set entity-pack reply mode message, escape:%ld ms. \n", (GetCurrentTime_us() - t_start) / 1000);
+	printf("set entity-pack reply message, escape:%ld ms. \n", (GetCurrentTime_us() - t_start) / 1000);
 	return res;
 }
 
@@ -1389,6 +1412,87 @@ int usb_message_control_mode_switch(int rtc_control_mode)
 	return res;
 }
 
+int usb_message_home_LECPA_100(int home_action)
+{
+	int res;
+	int res_wake;
+	int nop_trywait_TIMEOUT = 50;
+	usb_msg_home_parts_t home_parts_msg;
+	home_parts_msg.cmd_id = Cmd_HomeParts;
+	home_parts_msg.sub_func =SubFunc_home_LECPA_100;
+	home_parts_msg.sub_cmd = (HomeParts_SubCmd)home_action;
+	home_parts_msg.argv_1 = Dummy_00;
+
+	usb_msg_home_parts_fbk_t *p_home_parts_fbk = &g_msg_home_parts_fbk;
+	p_home_parts_fbk->home_parts_fbk_wake.reset();
+	unsigned long t_start = GetCurrentTime_us();
+	USB_Msg_To_TxBulkBuffer((ptr_usb_msg_u8)&home_parts_msg, 4);
+	while (1)
+	{
+		res_wake = p_home_parts_fbk->home_parts_fbk_wake.tryWait(nop_trywait_TIMEOUT);
+		if (res_wake == 1)
+		{
+			sprintf(str_log, "%s[%d] RespId:0x%02x, SubFunc:0x%02x, routine:%d, state:%d",
+					__func__, __LINE__,
+					p_home_parts_fbk->home_parts_fbk.cmd_id_rep,
+					p_home_parts_fbk->home_parts_fbk.sub_func,
+					p_home_parts_fbk->home_parts_fbk.home_routine,
+					p_home_parts_fbk->home_parts_fbk.home_state);
+			string tmp_string(str_log);
+			goDriverLogger.Log("info", tmp_string);
+			res = 0;
+		}
+		else
+		{
+			sprintf(str_log, "%s[%d] time out", __func__, __LINE__);
+			string tmp_string(str_log);
+			goDriverLogger.Log("error", tmp_string);
+			res = -1;
+		}
+		break;
+	}
+	printf("set home parts message, escape:%ld ms. \n", (GetCurrentTime_us() - t_start) / 1000);
+	return res;
+}
+
+int usb_message_LECPA_100_clear_alarm()
+{
+	Poco::Event wait_ms;
+	ioentity_pack_t entity_tmp;
+	vector<ioentity_pack_t> entities;
+	entity_tmp.entity_name = 30;
+	entity_tmp.entity_value = 1;
+	entities.push_back(entity_tmp);
+	wait_ms.reset();
+	
+	usb_message_set_entity_pack(&entities);
+	wait_ms.tryWait(50);
+
+	entities.clear();
+	entity_tmp.entity_value = 0;
+	entities.push_back(entity_tmp);
+	usb_message_set_entity_pack(&entities);
+	return 0;
+}
+
+int usb_message_LECPA_100_x_jmp(int direction, int steps)
+{
+	Poco::Event wait_ms;
+	ioentity_pack_t entity_tmp;
+	vector<ioentity_pack_t> entities;
+
+	if ((direction > 1) || (direction <0))
+		return -1;
+	entity_tmp.entity_name = 2;
+	entity_tmp.entity_value = direction;
+	entities.push_back(entity_tmp);
+	wait_ms.reset();
+	usb_message_set_entity_pack(&entities);
+	wait_ms.tryWait(10);
+	usb_message_set_x_pulse_gen(1, 1600, steps, 100);
+	return 0;
+}
+
 bool USB_Msg_Parser(USB_TaskResp_msg_t *task_msg)
 {
 	usb_msg_u8 msg[MESSAGE_MAX];
@@ -1458,6 +1562,11 @@ bool USB_Msg_Parser(USB_TaskResp_msg_t *task_msg)
 			else if (p_taskmsg->cmd_id_rep == RespPositive_ControlModeSwitch)
 			{
 				memcpy(task_msg, (usb_msg_u8 *)msg, sizeof(usb_msg_control_mode_switch_reply_t));
+				b_new_msg = true;
+			}
+			else if (p_taskmsg->cmd_id_rep == RespPositive_HomeParts)
+			{
+				memcpy(task_msg, (usb_msg_u8 *)msg, sizeof(usb_msg_home_parts_reply_t));
 				b_new_msg = true;
 			}
 		}

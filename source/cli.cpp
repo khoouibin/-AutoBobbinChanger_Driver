@@ -405,6 +405,45 @@ void CommandLineInterface()
                 }
             }
         }
+        else if (cmd == "l100-home")
+        {
+            if (v.size() >= 2)
+            {
+                try
+                {
+                    int home_act = std::stoi(v[1]);
+                    usb_message_home_LECPA_100(home_act);
+                }
+                catch (const std::exception &e)
+                {
+                    std::cout << "echo message, exception:" << e.what() << '\n';
+                }
+            }
+            else
+            {
+                cout << "unsupported command:" << command_line << endl;
+            }
+        }
+        else if (cmd == "l00-clr")
+        {
+            usb_message_LECPA_100_clear_alarm();
+        }
+        else if (cmd == "l100-jmp")
+        {
+            if (v.size() >= 3)
+            {
+                try
+                {
+                    int dir = std::stoi(v[1]);
+                    int steps = std::stoi(v[2]);
+                    usb_message_LECPA_100_x_jmp(dir, steps);
+                }
+                catch (const std::exception &e)
+                {
+                    std::cout << "echo message, exception:" << e.what() << '\n';
+                }
+            }
+        }
         else if (cmd == "tcp")
         {
             int res;
