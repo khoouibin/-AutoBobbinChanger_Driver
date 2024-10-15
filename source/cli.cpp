@@ -444,6 +444,28 @@ void CommandLineInterface()
                 }
             }
         }
+        else if (cmd == "l100-servo")
+        {
+            int lecpa100_action=0;
+            if (v.size() >= 2)
+            {
+                try
+                {
+                    int servo_cmd = std::stoi(v[1]);
+                    if (servo_cmd == 1)
+                        lecpa100_action = (int)SubFunc_LECPA_Set_ServoOn;
+                    else if (servo_cmd == 0)
+                        lecpa100_action = (int)SubFunc_LECPA_Set_ServoOff;
+                    else
+                        lecpa100_action = (int)SubFunc_LECPA_max;
+                    usb_message_LECPA_100_ControlCmd(lecpa100_action);
+                }
+                catch (const std::exception &e)
+                {
+                    std::cout << "echo message, exception:" << e.what() << '\n';
+                }
+            }
+        }     
         else if (cmd == "tcp")
         {
             int res;

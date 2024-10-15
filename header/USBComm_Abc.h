@@ -68,6 +68,7 @@ enum Protocol_Command
 	Cmd_ControlModeSwitch = 0x10,
 	Cmd_HomeParts = 0x11,
 	Cmd_LECPA_100_Control = 0x12,
+	Cmd_LECPA_30_Control = 0x13,
 	Cmd_MAX,
 };
 
@@ -84,7 +85,7 @@ enum Protocol_PositiveResponse
 	RespPositive_ControlModeSwitch = 0x50,
 	RespPositive_HomeParts = 0x51,
 	RespPositive_LECPA_100_Control = 0x52,
-
+	RespPositive_LECPA_30_Control = 0x53,
 };
 
 enum Protocol_NegativeResponse
@@ -193,6 +194,23 @@ enum HomeParts_SubCmd
 	SubCmd_Abort = 0,
 	SubCmd_Start = 1,
 	SubCmd_max,
+};
+
+enum LECPA_SubFunc
+{
+	SubFunc_LECPA_Mov_OrgPoint = 1, // without subcmd
+	SubFunc_LECPA_Mov_MinPoint = 2, // without subcmd
+	SubFunc_LECPA_Mov_MaxPoint = 3, // without subcmd
+	SubFunc_LECPA_Mov_AnyPoint = 4, // with subcmd
+	SubFunc_LECPA_Set_ServoOn = 5,	   // without subcmd
+	SubFunc_LECPA_Set_ServoOff = 6,	   // without subcmd
+	SubFunc_LECPA_Mov_OrgPoint_polling_reply = 11,
+	SubFunc_LECPA_Mov_MinPoint_polling_reply = 12,
+	SubFunc_LECPA_Mov_MaxPoint_polling_reply = 13,
+	SubFunc_LECPA_Mov_AnyPoint_polling_reply = 14,
+	SubFunc_LECPA_Set_ServoOn_polling_reply = 15,
+	SubFunc_LECPA_Set_ServoOff_polling_reply = 16,
+	SubFunc_LECPA_max,
 };
 
 enum Reponse_Code
@@ -617,6 +635,28 @@ typedef struct
 	Poco::Event home_parts_fbk_wake;
 } usb_msg_home_parts_fbk_t;
 
+typedef struct
+{
+	unsigned char cmd_id;
+	unsigned char sub_func;
+	signed short position_cmd;
+	OCx_src_t x_sequence;
+} usb_msg_lecpa_drive_cmd_t;
+
+typedef struct
+{
+	unsigned char cmd_id_rep;
+	unsigned char sub_func;
+	char drive_state;
+	char argv_1;
+} usb_msg_lecpa_drive_cmd_reply_t;
+
+typedef struct
+{
+	usb_msg_lecpa_drive_cmd_reply_t lecpa_drive_cmd_fbk;
+	Poco::Event lecpa_drive_cmd_fbk_wake;
+} usb_msg_lecpa_drive_cmd_fbk_t;
+
 // should be create a profile.h to collect below.
 typedef struct
 {
@@ -700,4 +740,6 @@ int usb_message_control_mode_switch(int rtc_control_mode);
 int usb_message_home_LECPA_100(int home_action);
 int usb_message_LECPA_100_clear_alarm();
 int usb_message_LECPA_100_x_jmp(int direction, int steps);
+
+int usb_message_LECPA_100_ControlCmd(int action);
 #endif

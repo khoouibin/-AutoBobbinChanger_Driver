@@ -25,6 +25,7 @@ usb_msg_z_pulse_gen_fbk_t g_msg_z_pulse_gen_fbk;
 usb_msg_x_pulse_gen_fbk_t g_msg_x_pulse_gen_fbk;
 usb_msg_control_mode_switch_fbk_t g_msg_control_mode_switch_fbk;
 usb_msg_home_parts_fbk_t g_msg_home_parts_fbk;
+usb_msg_lecpa_drive_cmd_fbk_t g_msg_lecpa_drive_cmd_fbk;
 
 char str_log[256];
 char libusb_error_string[64];
@@ -441,7 +442,7 @@ void *USBComm_Task_Service_Abc(void *p)
 	usb_msg_reset_fbk_t* p_resetfbk= &g_msg_reset_fbk;
 	usb_msg_profile_fbk_t* p_profilefbk = &g_msg_profile_fbk;
 	usb_msg_log_setting_fbk_t* p_logsettingfbk = &g_msg_log_setting_fbk;
-	usb_msg_log_reply_t* pLogsetting_msg = (usb_msg_log_reply_t*)&Task_msg;
+	usb_msg_log_reply_t* p_logsetting_reply = (usb_msg_log_reply_t*)&Task_msg;
 	usb_msg_entitytable_fbk_t *p_entitytable_fbk = &g_msg_entitytable_fbk;
 	usb_msg_entitypack_fbk_t *p_entitypack_fbk = &g_msg_entitypack_fbk;
 	usb_msg_entity_pack_t* p_entitypack_msg=(usb_msg_entity_pack_t*)&Task_msg;
@@ -449,8 +450,10 @@ void *USBComm_Task_Service_Abc(void *p)
 	usb_msg_x_pulse_gen_fbk_t *p_x_pulse_gen_fbk = &g_msg_x_pulse_gen_fbk;
 	usb_msg_control_mode_switch_fbk_t *p_mode_switch_fbk = &g_msg_control_mode_switch_fbk;
 	usb_msg_home_parts_fbk_t *p_home_parts_fbk = &g_msg_home_parts_fbk;
-	usb_msg_home_parts_reply_t* pHome_parts_reply=(usb_msg_home_parts_reply_t*)&Task_msg;
-
+	usb_msg_home_parts_reply_t* p_home_parts_reply=(usb_msg_home_parts_reply_t*)&Task_msg;
+	usb_msg_lecpa_drive_cmd_fbk_t *p_lecpa_drive_cmd_fbk = &g_msg_lecpa_drive_cmd_fbk;
+	usb_msg_lecpa_drive_cmd_reply_t *p_lecpa_drive_cmd_reply = (usb_msg_lecpa_drive_cmd_reply_t*)&Task_msg;
+	
 	pthread_detach(pthread_self());
 	while (g_b_USBComm_Task_run == true)
 	{
@@ -497,18 +500,18 @@ void *USBComm_Task_Service_Abc(void *p)
 					}
 					else if (Task_msg.cmd_id_rep==RespPositive_Log)
 					{
-						if (pLogsetting_msg->sub_func == SubFunc_log_msg_reply)
+						if (p_logsetting_reply->sub_func == SubFunc_log_msg_reply)
 						{
 							sprintf(str_log, "%s[%d]cnt:%d, msg:%s", __func__, __LINE__,
-									(int)pLogsetting_msg->log_counter, pLogsetting_msg->data);
+									(int)p_logsetting_reply->log_counter, p_logsetting_reply->data);
 							string tmp_string(str_log);
 							goDriverLogger.Log("debug", tmp_string);
 						}
 						else
 						{
-							p_logsettingfbk->log_setting_fbk.cmd_id_rep = pLogsetting_msg->cmd_id_rep;
-							p_logsettingfbk->log_setting_fbk.sub_func = pLogsetting_msg->sub_func;
-							p_logsettingfbk->log_setting_fbk.data[0] = pLogsetting_msg->data[0];
+							p_logsettingfbk->log_setting_fbk.cmd_id_rep = p_logsetting_reply->cmd_id_rep;
+							p_logsettingfbk->log_setting_fbk.sub_func = p_logsetting_reply->sub_func;
+							p_logsettingfbk->log_setting_fbk.data[0] = p_logsetting_reply->data[0];
 							p_logsettingfbk->log_setting_fbk_wake.set();
 						}
 					}
@@ -592,22 +595,51 @@ void *USBComm_Task_Service_Abc(void *p)
 					}
 					else if (Task_msg.cmd_id_rep == RespPositive_HomeParts)
 					{
-						if (pHome_parts_reply->sub_func ==SubFunc_home_LECPA_100_polling_reply)
+						if (p_home_parts_reply->sub_func ==SubFunc_home_LECPA_100_polling_reply)
 						{
 							sprintf(str_log, "%s[%d] subf:0x%02x, routine:0x%02x, state:%d", __func__, __LINE__,
-									pHome_parts_reply->sub_func,
-									pHome_parts_reply->home_routine,
-									(char)pHome_parts_reply->home_state);
+									p_home_parts_reply->sub_func,
+									p_home_parts_reply->home_routine,
+									(char)p_home_parts_reply->home_state);
 							string tmp_string(str_log);
 							goDriverLogger.Log("debug", tmp_string);
 						}
-						else if (pHome_parts_reply->sub_func == SubFunc_home_LECPA_100)
+						else if (p_home_parts_reply->sub_func == SubFunc_home_LECPA_100)
 						{
-							p_home_parts_fbk->home_parts_fbk.cmd_id_rep = pHome_parts_reply->cmd_id_rep;
-							p_home_parts_fbk->home_parts_fbk.sub_func = pHome_parts_reply->sub_func;
-							p_home_parts_fbk->home_parts_fbk.home_routine = pHome_parts_reply->home_routine;
-							p_home_parts_fbk->home_parts_fbk.home_state = pHome_parts_reply->home_state;
+							p_home_parts_fbk->home_parts_fbk.cmd_id_rep = p_home_parts_reply->cmd_id_rep;
+							p_home_parts_fbk->home_parts_fbk.sub_func = p_home_parts_reply->sub_func;
+							p_home_parts_fbk->home_parts_fbk.home_routine = p_home_parts_reply->home_routine;
+							p_home_parts_fbk->home_parts_fbk.home_state = p_home_parts_reply->home_state;
 							p_home_parts_fbk->home_parts_fbk_wake.set();
+						}
+					}
+					else if (Task_msg.cmd_id_rep == RespPositive_LECPA_100_Control)
+					{
+						if ((p_lecpa_drive_cmd_reply->sub_func == SubFunc_LECPA_Mov_OrgPoint_polling_reply) ||
+								 (p_lecpa_drive_cmd_reply->sub_func == SubFunc_LECPA_Mov_MinPoint_polling_reply) ||
+								 (p_lecpa_drive_cmd_reply->sub_func == SubFunc_LECPA_Mov_MaxPoint_polling_reply) ||
+								 (p_lecpa_drive_cmd_reply->sub_func == SubFunc_LECPA_Mov_AnyPoint_polling_reply) ||
+								 (p_lecpa_drive_cmd_reply->sub_func == SubFunc_LECPA_Set_ServoOn_polling_reply) ||
+								 (p_lecpa_drive_cmd_reply->sub_func == SubFunc_LECPA_Set_ServoOff_polling_reply))
+						{
+							sprintf(str_log, "%s[%d] subf:0x%02x, servo_state:0x%02x, drive_state:0x%02x", __func__, __LINE__,
+									p_lecpa_drive_cmd_reply->sub_func,
+									(((char)p_lecpa_drive_cmd_reply->drive_state) >> 4) & 0x0f,
+									((char)p_lecpa_drive_cmd_reply->drive_state & 0xf));
+							string tmp_string(str_log);
+							goDriverLogger.Log("debug", tmp_string);
+						}
+						else if ((p_lecpa_drive_cmd_reply->sub_func == SubFunc_LECPA_Mov_OrgPoint) ||
+								 (p_lecpa_drive_cmd_reply->sub_func == SubFunc_LECPA_Mov_MinPoint) ||
+								 (p_lecpa_drive_cmd_reply->sub_func == SubFunc_LECPA_Mov_MaxPoint) ||
+								 (p_lecpa_drive_cmd_reply->sub_func == SubFunc_LECPA_Mov_AnyPoint) ||
+								 (p_lecpa_drive_cmd_reply->sub_func == SubFunc_LECPA_Set_ServoOn) ||
+								 (p_lecpa_drive_cmd_reply->sub_func == SubFunc_LECPA_Set_ServoOff))
+						{
+							p_lecpa_drive_cmd_fbk->lecpa_drive_cmd_fbk.cmd_id_rep = p_lecpa_drive_cmd_reply->cmd_id_rep;
+							p_lecpa_drive_cmd_fbk->lecpa_drive_cmd_fbk.sub_func = p_lecpa_drive_cmd_reply->sub_func;
+							p_lecpa_drive_cmd_fbk->lecpa_drive_cmd_fbk.drive_state = p_lecpa_drive_cmd_reply->drive_state;
+							p_lecpa_drive_cmd_fbk->lecpa_drive_cmd_fbk_wake.set();
 						}
 					}
 				}
@@ -1493,6 +1525,50 @@ int usb_message_LECPA_100_x_jmp(int direction, int steps)
 	return 0;
 }
 
+int usb_message_LECPA_100_ControlCmd(int action)
+{
+	int res;
+	int res_wake;
+	int nop_trywait_TIMEOUT = 50;
+	usb_msg_lecpa_drive_cmd_t lecpa_drive_msg;
+	lecpa_drive_msg.cmd_id = Cmd_LECPA_100_Control;
+	lecpa_drive_msg.sub_func =(LECPA_SubFunc)action;
+	lecpa_drive_msg.position_cmd = 0x0000;
+	//lecpa_drive_msg.x_sequence.cx[0].dutyon = 0;
+	memset(lecpa_drive_msg.x_sequence.cx, 0, sizeof(lecpa_drive_msg.x_sequence.cx));
+	memset(&lecpa_drive_msg.x_sequence.cx_last, 0, sizeof(lecpa_drive_msg.x_sequence.cx_last));
+
+	usb_msg_lecpa_drive_cmd_fbk_t *p_lecpa_drive_cmd_fbk = &g_msg_lecpa_drive_cmd_fbk;
+	p_lecpa_drive_cmd_fbk->lecpa_drive_cmd_fbk_wake.reset();
+	unsigned long t_start = GetCurrentTime_us();
+	USB_Msg_To_TxBulkBuffer((ptr_usb_msg_u8)&lecpa_drive_msg, sizeof(lecpa_drive_msg));
+	while (1)
+	{
+		res_wake = p_lecpa_drive_cmd_fbk->lecpa_drive_cmd_fbk_wake.tryWait(nop_trywait_TIMEOUT);
+		if (res_wake == 1)
+		{
+			sprintf(str_log, "%s[%d] RespId:0x%02x, SubFunc:0x%02x, driv_state:0x%02x",
+					__func__, __LINE__,
+					p_lecpa_drive_cmd_fbk->lecpa_drive_cmd_fbk.cmd_id_rep,
+					p_lecpa_drive_cmd_fbk->lecpa_drive_cmd_fbk.sub_func,
+					p_lecpa_drive_cmd_fbk->lecpa_drive_cmd_fbk.drive_state);
+			string tmp_string(str_log);
+			goDriverLogger.Log("info", tmp_string);
+			res = 0;
+		}
+		else
+		{
+			sprintf(str_log, "%s[%d] time out", __func__, __LINE__);
+			string tmp_string(str_log);
+			goDriverLogger.Log("error", tmp_string);
+			res = -1;
+		}
+		break;
+	}
+	printf("LECPA-100 control msg message, escape:%ld ms. \n", (GetCurrentTime_us() - t_start) / 1000);
+	return res;
+}
+
 bool USB_Msg_Parser(USB_TaskResp_msg_t *task_msg)
 {
 	usb_msg_u8 msg[MESSAGE_MAX];
@@ -1567,6 +1643,11 @@ bool USB_Msg_Parser(USB_TaskResp_msg_t *task_msg)
 			else if (p_taskmsg->cmd_id_rep == RespPositive_HomeParts)
 			{
 				memcpy(task_msg, (usb_msg_u8 *)msg, sizeof(usb_msg_home_parts_reply_t));
+				b_new_msg = true;
+			}
+			else if (p_taskmsg->cmd_id_rep == RespPositive_LECPA_100_Control)
+			{
+				memcpy(task_msg, (usb_msg_u8 *)msg, sizeof(usb_msg_lecpa_drive_cmd_reply_t));
 				b_new_msg = true;
 			}
 		}
