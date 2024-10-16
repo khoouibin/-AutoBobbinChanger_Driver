@@ -622,10 +622,27 @@ void *USBComm_Task_Service_Abc(void *p)
 								 (p_lecpa_drive_cmd_reply->sub_func == SubFunc_LECPA_Set_ServoOn_polling_reply) ||
 								 (p_lecpa_drive_cmd_reply->sub_func == SubFunc_LECPA_Set_ServoOff_polling_reply))
 						{
-							sprintf(str_log, "%s[%d] subf:0x%02x, servo_state:0x%02x, drive_state:0x%02x", __func__, __LINE__,
+							string str_servo_state, str_drive_state;
+							char u8_servo_state = (((char)p_lecpa_drive_cmd_reply->drive_state) >> 4) & 0x0f;
+							str_servo_state = (u8_servo_state == 0) ? "SERVO_OFF" : "SERVO_ON";
+							char u8_drive_state = ((char)p_lecpa_drive_cmd_reply->drive_state & 0x0f);
+							if (u8_drive_state == -1)
+								str_drive_state = "Drive_NotReady";
+							else if (u8_drive_state == 0)
+								str_drive_state = "Drive_Ready";
+							else if (u8_drive_state == 1)
+								str_drive_state = "Drive_Moving_OrgPoint";
+							else if (u8_drive_state == 2)
+								str_drive_state = "Drive_Moving_MinPoint";
+							else if (u8_drive_state == 3)
+								str_drive_state = "Drive_Moving_MaxPoint";
+							else if (u8_drive_state == 4)
+								str_drive_state = "Drive_Moving_AnyPoint";
+
+							sprintf(str_log, "%s[%d] subf:0x%02x, servo_state=%s, drive_state:%s", __func__, __LINE__,
 									p_lecpa_drive_cmd_reply->sub_func,
-									(((char)p_lecpa_drive_cmd_reply->drive_state) >> 4) & 0x0f,
-									((char)p_lecpa_drive_cmd_reply->drive_state & 0xf));
+									str_servo_state.c_str(),
+									str_drive_state.c_str());
 							string tmp_string(str_log);
 							goDriverLogger.Log("debug", tmp_string);
 						}
@@ -1547,11 +1564,27 @@ int usb_message_LECPA_100_ControlCmd(int action)
 		res_wake = p_lecpa_drive_cmd_fbk->lecpa_drive_cmd_fbk_wake.tryWait(nop_trywait_TIMEOUT);
 		if (res_wake == 1)
 		{
-			sprintf(str_log, "%s[%d] RespId:0x%02x, SubFunc:0x%02x, driv_state:0x%02x",
+			string str_servo_state, str_drive_state;
+			char u8_servo_state = (((char)p_lecpa_drive_cmd_fbk->lecpa_drive_cmd_fbk.drive_state) >> 4) & 0x0f;
+			str_servo_state = (u8_servo_state == 0) ? "SERVO_OFF" : "SERVO_ON";
+			char u8_drive_state = ((char)p_lecpa_drive_cmd_fbk->lecpa_drive_cmd_fbk.drive_state & 0x0f);
+			if (u8_drive_state == -1)
+				str_drive_state = "Drive_NotReady";
+			else if (u8_drive_state == 0)
+				str_drive_state = "Drive_Ready";
+			else if (u8_drive_state == 1)
+				str_drive_state = "Drive_Moving_OrgPoint";
+			else if (u8_drive_state == 2)
+				str_drive_state = "Drive_Moving_MinPoint";
+			else if (u8_drive_state == 3)
+				str_drive_state = "Drive_Moving_MaxPoint";
+			else if (u8_drive_state == 4)
+				str_drive_state = "Drive_Moving_AnyPoint";
+			sprintf(str_log, "%s[%d] RespId:0x%02x, SubFunc:0x%02x, servo_state=%s, drive_state:%s",
 					__func__, __LINE__,
 					p_lecpa_drive_cmd_fbk->lecpa_drive_cmd_fbk.cmd_id_rep,
 					p_lecpa_drive_cmd_fbk->lecpa_drive_cmd_fbk.sub_func,
-					p_lecpa_drive_cmd_fbk->lecpa_drive_cmd_fbk.drive_state);
+					str_servo_state.c_str(),str_drive_state.c_str());
 			string tmp_string(str_log);
 			goDriverLogger.Log("info", tmp_string);
 			res = 0;

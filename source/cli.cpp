@@ -465,7 +465,23 @@ void CommandLineInterface()
                     std::cout << "echo message, exception:" << e.what() << '\n';
                 }
             }
-        }     
+        }
+        else if (cmd == "l100-min")
+        {
+            usb_message_LECPA_100_ControlCmd(SubFunc_LECPA_Mov_MinPoint);
+        }
+        else if (cmd == "l100-max")
+        {
+            usb_message_LECPA_100_ControlCmd(SubFunc_LECPA_Mov_MaxPoint);
+        }
+        else if (cmd == "l100-org")
+        {
+            usb_message_LECPA_100_ControlCmd(SubFunc_LECPA_Mov_OrgPoint);
+        }
+        // else if (cmd == "l100-any")
+        // {
+        //     usb_message_LECPA_100_ControlCmd(SubFunc_LECPA_Mov_AnyPoint);
+        // }
         else if (cmd == "tcp")
         {
             int res;
