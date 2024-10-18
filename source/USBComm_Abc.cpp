@@ -35,7 +35,7 @@ bool g_b_USBComm_Rx_run = true;
 bool g_b_USBComm_Tx_run = true;
 bool g_b_USBComm_Task_run = true;
 bool g_b_AutoReConnect_run = true;
-
+Poco::Event g_LECPA100moving_Idle,g_LECPA100moving_waitReady;
 // char BL_USB_WriteBuffer(void);
 
 int USBComm_Driver_Init_Threads(void)
@@ -453,7 +453,8 @@ void *USBComm_Task_Service_Abc(void *p)
 	usb_msg_home_parts_reply_t* p_home_parts_reply=(usb_msg_home_parts_reply_t*)&Task_msg;
 	usb_msg_lecpa_drive_cmd_fbk_t *p_lecpa_drive_cmd_fbk = &g_msg_lecpa_drive_cmd_fbk;
 	usb_msg_lecpa_drive_cmd_reply_t *p_lecpa_drive_cmd_reply = (usb_msg_lecpa_drive_cmd_reply_t*)&Task_msg;
-	
+	usb_msg_z_pulse_gen_reply_t *p_zpulse_msg = (usb_msg_z_pulse_gen_reply_t *)&Task_msg;
+
 	pthread_detach(pthread_self());
 	while (g_b_USBComm_Task_run == true)
 	{
@@ -575,9 +576,20 @@ void *USBComm_Task_Service_Abc(void *p)
 					}
 					else if (Task_msg.cmd_id_rep == RespPositive_Z_PulseGen)
 					{
-						p_z_pulse_gen_fbk->z_pulse_gen_fbk.cmd_id_rep = Task_msg.cmd_id_rep;
-						p_z_pulse_gen_fbk->z_pulse_gen_fbk.sub_func = Task_msg.sub_func;
-						p_z_pulse_gen_fbk->z_pulse_gen_fbk_wake.set();
+						if ((p_zpulse_msg->sub_func == SubFunc_z_pulse_gen_off) || (p_zpulse_msg->sub_func == SubFunc_z_pulse_gen_pwm))
+						{
+							p_z_pulse_gen_fbk->z_pulse_gen_fbk.cmd_id_rep = Task_msg.cmd_id_rep;
+							p_z_pulse_gen_fbk->z_pulse_gen_fbk.sub_func = Task_msg.sub_func;
+							p_z_pulse_gen_fbk->z_pulse_gen_fbk_wake.set();
+						}
+						else if (p_zpulse_msg->sub_func == SubFunc_z_pulse_turns_reply)
+						{
+							sprintf(str_log, "%s[%d] subf:0x%02x, turns:%d", __func__, __LINE__,
+									p_zpulse_msg->sub_func,
+									p_zpulse_msg->turns);
+							string tmp_string(str_log);
+							goDriverLogger.Log("debug", tmp_string);
+						}
 					}
 					else if (Task_msg.cmd_id_rep == RespPositive_X_PulseGen)
 					{
@@ -638,6 +650,11 @@ void *USBComm_Task_Service_Abc(void *p)
 								str_drive_state = "Drive_Moving_MaxPoint";
 							else if (u8_drive_state == 4)
 								str_drive_state = "Drive_Moving_AnyPoint";
+
+							if (u8_drive_state == 0)
+							{
+								g_LECPA100moving_waitReady.set();
+							}
 
 							sprintf(str_log, "%s[%d] subf:0x%02x, servo_state=%s, drive_state:%s", __func__, __LINE__,
 									p_lecpa_drive_cmd_reply->sub_func,
@@ -1299,7 +1316,7 @@ int usb_message_set_z_pulse_gen(int z_rpm)
 	z_pulse_gen_msg.cmd_id = Cmd_Z_PulseGen;
 	z_pulse_gen_msg.sub_func = (z_rpm == 0) ? SubFunc_z_pulse_gen_off : SubFunc_z_pulse_gen_pwm;
 
-	if (z_rpm_pulse_value_converter(z_rpm, 500, &w, &x, &y, &z) == -1)
+	if (z_rpm_pulse_value_converter(z_rpm, 1600, &w, &x, &y, &z) == -1)
 	{
 		z_pulse_gen_msg.z_pwm_value.period_hiword = 0;
 		z_pulse_gen_msg.z_pwm_value.period_loword = 0;
@@ -1340,7 +1357,7 @@ int usb_message_set_z_pulse_gen(int z_rpm)
 		}
 		break;
 	}
-	printf("set entity-table reply mode message, escape:%ld ms. \n", (GetCurrentTime_us() - t_start) / 1000);
+	printf("set z-pulse message, escape:%ld ms. \n", (GetCurrentTime_us() - t_start) / 1000);
 	return res;
 }
 
@@ -1600,6 +1617,107 @@ int usb_message_LECPA_100_ControlCmd(int action)
 	}
 	printf("LECPA-100 control msg message, escape:%ld ms. \n", (GetCurrentTime_us() - t_start) / 1000);
 	return res;
+}
+
+pthread_t LECPA100moving_pthread;
+bool g_LECPA100movingThreadAlive=true;
+int g_LECPA100moving=0;
+int g_LECPA100moving_pattern = 0;
+void LECPA100move()
+{
+	g_LECPA100moving = 1;
+	g_LECPA100moving_Idle.set();
+}
+
+void LECPA100stop()
+{
+	g_LECPA100moving = 0;
+}
+void *LECPA100moving(void *p)
+{
+	(void)p;
+	Poco::Event wait_ms;
+	pthread_detach(pthread_self());
+
+	while (g_LECPA100movingThreadAlive)
+	{
+		g_LECPA100moving_Idle.wait();
+		if (g_LECPA100movingThreadAlive == false)
+			break;
+
+		while(1)
+		{
+			if (g_LECPA100moving == 1)
+			{
+				switch (g_LECPA100moving_pattern)
+				{
+				case 0:
+					usb_message_LECPA_100_ControlCmd(SubFunc_LECPA_Mov_OrgPoint);
+					g_LECPA100moving_waitReady.reset();
+					g_LECPA100moving_waitReady.wait();
+					printf("LECPA100moving-case 0\n");
+					wait_ms.tryWait(1000);
+					g_LECPA100moving_pattern++;
+					break;
+
+				case 1:
+					usb_message_LECPA_100_ControlCmd(SubFunc_LECPA_Mov_MaxPoint);
+					g_LECPA100moving_waitReady.reset();
+					g_LECPA100moving_waitReady.wait();
+					printf("LECPA100moving-case 1\n");
+					wait_ms.tryWait(1000);
+					g_LECPA100moving_pattern++;
+					break;
+
+				case 2:
+					usb_message_LECPA_100_ControlCmd(SubFunc_LECPA_Mov_MinPoint);
+					g_LECPA100moving_waitReady.reset();
+					g_LECPA100moving_waitReady.wait();
+					printf("LECPA100moving-case 2\n");
+					wait_ms.tryWait(1000);
+					g_LECPA100moving_pattern=0;
+					break;
+				}
+			}
+			else
+			{
+				printf("LECPA100moving-stop\n");
+				g_LECPA100moving_pattern = 0;
+				usb_message_LECPA_100_ControlCmd(SubFunc_LECPA_Mov_MinPoint);
+				break;
+			}			
+		}
+
+		// xyTab_ReadSpeedStart();
+		// for (int i = 0; i < g_xyTabMaxSpeed.g_xyTab_MaxSpeed_TestCycle; i++)
+		// {
+		// 	XY_MoveRatioSpd(g_xyTabMaxSpeed.iXposStart, g_xyTabMaxSpeed.iYposStart, 100, 1);
+		// 	XY_MoveRatioSpd(g_xyTabMaxSpeed.iXposEnd, g_xyTabMaxSpeed.iYposEnd, 100, 1);
+		// }
+		// g_xyTabMaxSpeed.g_xyTab_MaxSpeed_Start = 0;
+	}
+	pthread_exit(NULL);
+}
+
+int LECPA100moving_pthread_init(void)
+{
+	int res = pthread_create(&LECPA100moving_pthread, NULL, LECPA100moving, NULL);
+	if (res != 0)
+	{
+		sprintf(str_log, "%s[%d] errno:%d, %s",
+					__func__, __LINE__,
+					res, strerror(res));
+		string tmp_string(str_log);
+		goDriverLogger.Log("info", tmp_string);
+	}
+	g_LECPA100moving_Idle.reset();
+	return res;
+}
+
+void LECPA100moving_PthreadStop()
+{
+	g_LECPA100movingThreadAlive = false;
+	g_LECPA100moving_Idle.set();
 }
 
 bool USB_Msg_Parser(USB_TaskResp_msg_t *task_msg)

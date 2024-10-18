@@ -159,6 +159,7 @@ enum Z_PulseGen_SubFunc
 	SubFunc_z_pulse_gen_off = 0,
 	SubFunc_z_pulse_gen_rpm = 1,
 	SubFunc_z_pulse_gen_pwm = 2,
+	SubFunc_z_pulse_turns_reply = 11,
 	SubFunc_z_pulse_gen_max,
 };
 
@@ -539,8 +540,7 @@ typedef struct
 {
 	unsigned char cmd_id_rep;
 	unsigned char sub_func;
-	unsigned char argv_0;
-	unsigned char argv_1;
+	unsigned short turns;
 } usb_msg_z_pulse_gen_reply_t;
 
 typedef struct
@@ -742,4 +742,9 @@ int usb_message_LECPA_100_clear_alarm();
 int usb_message_LECPA_100_x_jmp(int direction, int steps);
 
 int usb_message_LECPA_100_ControlCmd(int action);
+
+void LECPA100move();
+void LECPA100stop();
+int LECPA100moving_pthread_init(void);
+void LECPA100moving_PthreadStop();
 #endif

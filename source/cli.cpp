@@ -351,6 +351,24 @@ void CommandLineInterface()
                 printf("usb cmd  wrong, try again.\n");
             }
         }
+        else if (cmd == "z-on")
+        {
+            ioentity_pack_t entity_tmp;
+            vector<ioentity_pack_t> entities;
+            entity_tmp.entity_name = 6;
+            entity_tmp.entity_value = 0;
+            entities.push_back(entity_tmp);
+            usb_message_set_entity_pack(&entities);
+        }
+        else if (cmd == "z-off")
+        {
+            ioentity_pack_t entity_tmp;
+            vector<ioentity_pack_t> entities;
+            entity_tmp.entity_name = 6;
+            entity_tmp.entity_value = 1;
+            entities.push_back(entity_tmp);
+            usb_message_set_entity_pack(&entities);
+        }
         else if (cmd == "z-rpm")
         {
             // int t_period_h,t_period_l;
@@ -466,18 +484,27 @@ void CommandLineInterface()
                 }
             }
         }
-        else if (cmd == "l100-min")
+        else if (cmd == "min")
         {
             usb_message_LECPA_100_ControlCmd(SubFunc_LECPA_Mov_MinPoint);
         }
-        else if (cmd == "l100-max")
+        else if (cmd == "max")
         {
             usb_message_LECPA_100_ControlCmd(SubFunc_LECPA_Mov_MaxPoint);
         }
-        else if (cmd == "l100-org")
+        else if (cmd == "org")
         {
             usb_message_LECPA_100_ControlCmd(SubFunc_LECPA_Mov_OrgPoint);
         }
+        else if (cmd == "run")
+        {
+            LECPA100move();
+        }
+        else if (cmd == "stop")
+        {
+            LECPA100stop();
+        }
+
         // else if (cmd == "l100-any")
         // {
         //     usb_message_LECPA_100_ControlCmd(SubFunc_LECPA_Mov_AnyPoint);
