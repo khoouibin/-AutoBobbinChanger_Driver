@@ -648,7 +648,7 @@ typedef struct
 	unsigned char cmd_id_rep;
 	unsigned char sub_func;
 	char drive_state;
-	char argv_1;
+	char drive_stage;
 } usb_msg_lecpa_drive_cmd_reply_t;
 
 typedef struct
