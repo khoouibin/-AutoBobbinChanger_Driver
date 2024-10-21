@@ -741,8 +741,7 @@ int usb_message_home_LECPA_100(int home_action);
 int usb_message_LECPA_100_clear_alarm();
 int usb_message_LECPA_100_x_jmp(int direction, int steps);
 
-int usb_message_LECPA_100_ControlCmd(int action);
-
+int usb_message_LECPA_100_ControlCmd(int action,int any_point=-1);
 void LECPA100move();
 void LECPA100stop();
 int LECPA100moving_pthread_init(void);

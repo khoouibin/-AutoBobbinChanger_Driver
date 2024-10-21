@@ -1559,7 +1559,7 @@ int usb_message_LECPA_100_x_jmp(int direction, int steps)
 	return 0;
 }
 
-int usb_message_LECPA_100_ControlCmd(int action)
+int usb_message_LECPA_100_ControlCmd(int action,int any_point)
 {
 	int res;
 	int res_wake;
@@ -1567,8 +1567,7 @@ int usb_message_LECPA_100_ControlCmd(int action)
 	usb_msg_lecpa_drive_cmd_t lecpa_drive_msg;
 	lecpa_drive_msg.cmd_id = Cmd_LECPA_100_Control;
 	lecpa_drive_msg.sub_func =(LECPA_SubFunc)action;
-	lecpa_drive_msg.position_cmd = 0x0000;
-	//lecpa_drive_msg.x_sequence.cx[0].dutyon = 0;
+	lecpa_drive_msg.position_cmd = (lecpa_drive_msg.sub_func != SubFunc_LECPA_Mov_AnyPoint) ? 0 : any_point;
 	memset(lecpa_drive_msg.x_sequence.cx, 0, sizeof(lecpa_drive_msg.x_sequence.cx));
 	memset(&lecpa_drive_msg.x_sequence.cx_last, 0, sizeof(lecpa_drive_msg.x_sequence.cx_last));
 

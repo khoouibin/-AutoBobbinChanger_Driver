@@ -496,6 +496,22 @@ void CommandLineInterface()
         {
             usb_message_LECPA_100_ControlCmd(SubFunc_LECPA_Mov_OrgPoint);
         }
+        else if (cmd == "any")
+        {
+            // usb_message_LECPA_100_ControlCmd(SubFunc_LECPA_Mov_OrgPoint);
+            if (v.size() >= 2)
+            {
+                try
+                {
+                    int any_point = std::stoi(v[1]);
+                    usb_message_LECPA_100_ControlCmd(SubFunc_LECPA_Mov_AnyPoint,any_point);                
+                }
+                catch (const std::exception &e)
+                {
+                    std::cout << "echo message, exception:" << e.what() << '\n';
+                }
+            }
+        }
         else if (cmd == "run")
         {
             LECPA100move();
