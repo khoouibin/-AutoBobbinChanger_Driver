@@ -634,32 +634,50 @@ void *USBComm_Task_Service_Abc(void *p)
 								 (p_lecpa_drive_cmd_reply->sub_func == SubFunc_LECPA_Set_ServoOn_polling_reply) ||
 								 (p_lecpa_drive_cmd_reply->sub_func == SubFunc_LECPA_Set_ServoOff_polling_reply))
 						{
-							string str_servo_state, str_drive_state;
+							string str_servo_state, str_drive_state,str_drive_stage;
 							char u8_servo_state = (((char)p_lecpa_drive_cmd_reply->drive_state) >> 4) & 0x0f;
-							str_servo_state = (u8_servo_state == 0) ? "SERVO_OFF" : "SERVO_ON";
+							str_servo_state = (u8_servo_state == 0) ? "SRV_OFF" : "SRV_ON";
 							char u8_drive_state = ((char)p_lecpa_drive_cmd_reply->drive_state & 0x0f);
+							char u8_drive_stage = ((char)p_lecpa_drive_cmd_reply->drive_stage & 0xff);
+
 							if (u8_drive_state == -1)
-								str_drive_state = "Drive_NotReady";
+								str_drive_state = "NotReady";
 							else if (u8_drive_state == 0)
-								str_drive_state = "Drive_Ready";
+								str_drive_state = "Ready";
 							else if (u8_drive_state == 1)
-								str_drive_state = "Drive_Moving_OrgPoint";
+								str_drive_state = "MovOrg";
 							else if (u8_drive_state == 2)
-								str_drive_state = "Drive_Moving_MinPoint";
+								str_drive_state = "MovMin";
 							else if (u8_drive_state == 3)
-								str_drive_state = "Drive_Moving_MaxPoint";
+								str_drive_state = "MovMax";
 							else if (u8_drive_state == 4)
-								str_drive_state = "Drive_Moving_AnyPoint";
+								str_drive_state = "MovAny";
+
+							if (u8_drive_stage == -1)
+								str_drive_stage = "Null";
+							else if (u8_drive_stage == 0)
+								str_drive_stage = "Init";
+							else if (u8_drive_stage == 1)
+								str_drive_stage = "SetDir";
+							else if (u8_drive_stage == 2)
+								str_drive_stage = "SetPulse";
+							else if (u8_drive_stage == 3)
+								str_drive_stage = "wBUSYOn";
+							else if (u8_drive_stage == 4)
+								str_drive_stage = "wBUSYOff";
+							else if (u8_drive_stage == 5)
+								str_drive_stage = "Complete";
 
 							if (u8_drive_state == 0)
 							{
 								g_LECPA100moving_waitReady.set();
 							}
 
-							sprintf(str_log, "%s[%d] subf:0x%02x, servo_state=%s, drive_state:%s", __func__, __LINE__,
+							sprintf(str_log, "%s[%d] Subf: %02x Svo=%s DState:%s DStage:%s", __func__, __LINE__,
 									p_lecpa_drive_cmd_reply->sub_func,
 									str_servo_state.c_str(),
-									str_drive_state.c_str());
+									str_drive_state.c_str(),
+									str_drive_stage.c_str());
 							string tmp_string(str_log);
 							goDriverLogger.Log("debug", tmp_string);
 						}
