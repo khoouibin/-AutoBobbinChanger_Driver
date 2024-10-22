@@ -94,6 +94,7 @@ int main(int argc, char *argv[])
 	res_libusb_init = USBComm_Driver_Init_LIBUSB();
 	res_usbpthread_init = USBComm_Driver_Init_Threads();
 	LECPA100moving_pthread_init();
+	Autowinder_Slider_Init();
 	if (res_libusb_init != 0 || res_usbpthread_init != 0)
 	{
 		printf("LIBUSB_init() or USB_Pthread_init() Fault\n");

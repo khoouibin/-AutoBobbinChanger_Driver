@@ -37,6 +37,7 @@ bool g_b_USBComm_Task_run = true;
 bool g_b_AutoReConnect_run = true;
 Poco::Event g_LECPA100moving_Idle,g_LECPA100moving_waitReady;
 // char BL_USB_WriteBuffer(void);
+autowinder_with_slider_t g_auto_winder_slider;
 
 int USBComm_Driver_Init_Threads(void)
 {
@@ -1736,6 +1737,60 @@ void LECPA100moving_PthreadStop()
 	g_LECPA100movingThreadAlive = false;
 	g_LECPA100moving_Idle.set();
 }
+
+void *AutowinderSliderTask(void *p)
+{
+	(void)p;
+	Poco::Event wait_ms;
+	pthread_detach(pthread_self());
+
+	printf("AutowinderSliderTask\n");
+
+	while (g_LECPA100movingThreadAlive)
+	{
+		g_auto_winder_slider.autowinder_slider_task_awake.wait();
+		printf("AutowinderSliderTask-1\n");
+	}
+	printf("AutowinderSliderTask-off\n");
+
+	pthread_exit(NULL);
+}
+
+int Autowinder_Slider_Init(void)
+{
+	int res = pthread_create(&g_auto_winder_slider.winder_slider_thread, NULL, AutowinderSliderTask, NULL);
+	if (res != 0)
+	{
+		sprintf(str_log, "%s[%d] errno:%d, %s", __func__, __LINE__, res, strerror(res));
+		string tmp_string(str_log);
+		goDriverLogger.Log("info", tmp_string);
+		return res;
+	}
+	g_auto_winder_slider.autowinder_slider_task_awake.reset();
+	g_auto_winder_slider.winder_slider_thread_alive = true;
+
+	g_auto_winder_slider.inch_to_mm = 2.54;	//fixed
+	g_auto_winder_slider.slider_pulse_per_mm = 160;	
+	g_auto_winder_slider.slider_ori_point_pulse = -500;
+	g_auto_winder_slider.slider_move_total_mm = 12.5;
+	g_auto_winder_slider.winder_line_width_inch = 0.0059; //0.0059~0.0258
+	g_auto_winder_slider.winder_line_width_mm = g_auto_winder_slider.inch_to_mm * g_auto_winder_slider.winder_line_width_inch;
+	g_auto_winder_slider.slider_jog_pulse = (int)(g_auto_winder_slider.slider_move_total_mm/g_auto_winder_slider.winder_line_width_mm)*g_auto_winder_slider.slider_pulse_per_mm;
+	printf("slider_jog_pulse:%d\n",g_auto_winder_slider.slider_jog_pulse);
+	printf("winder_line_width_mm:%9.6f\n",g_auto_winder_slider.winder_line_width_mm);
+	printf("div:%9.6f\n",g_auto_winder_slider.slider_move_total_mm/g_auto_winder_slider.winder_line_width_mm);
+	return res;
+}
+	// int slider_pulse_per_mm;
+	// int slider_ori_point_pulse;
+	// float inch_to_mm;	
+	// float slider_move_total_mm;
+	// float winder_line_width_inch;
+	// float winder_line_width_mm;
+	// int slider_jog_pulse;
+	// int slider_jog_dir; //dir=0-> right, dir=1->left.
+	// int winder_max_cycle_cnt_to_stop;
+	// int winder_rpm;
 
 bool USB_Msg_Parser(USB_TaskResp_msg_t *task_msg)
 {

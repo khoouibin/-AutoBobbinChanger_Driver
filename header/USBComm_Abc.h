@@ -683,6 +683,28 @@ typedef struct
     INT_32 p02_11;
 } RTC_Profile_02_t;
 
+
+typedef struct
+{
+	pthread_t winder_slider_thread;
+	bool winder_slider_thread_alive;
+	Poco::Event autowinder_slider_task_awake;
+	Poco::Event winder_cycling_awake;
+	Poco::Event slider_jog_awake;
+	int slider_pulse_per_mm;
+	int slider_ori_point_pulse;
+	float inch_to_mm;	
+	float slider_move_total_mm;
+	float winder_line_width_inch;
+	float winder_line_width_mm;
+	int slider_jog_pulse;
+	int slider_jog_dir; //dir=0-> right, dir=1->left.
+	int winder_max_cycle_cnt_to_stop;
+	int winder_rpm;
+} autowinder_with_slider_t;
+
+
+
 int USBComm_Driver_GetDeviceList(int *suitable_device, int en_print);
 int USBComm_Driver_SelectTargetDevice(unsigned short idVendor, unsigned short idProduct);
 int USBComm_Driver_getTargetDevice(void);
@@ -746,4 +768,7 @@ void LECPA100move();
 void LECPA100stop();
 int LECPA100moving_pthread_init(void);
 void LECPA100moving_PthreadStop();
+
+int Autowinder_Slider_Init(void);
+
 #endif
