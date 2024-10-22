@@ -1769,13 +1769,13 @@ int Autowinder_Slider_Init(void)
 	g_auto_winder_slider.autowinder_slider_task_awake.reset();
 	g_auto_winder_slider.winder_slider_thread_alive = true;
 
-	g_auto_winder_slider.inch_to_mm = 2.54;	//fixed
+	g_auto_winder_slider.inch_to_mm = 25.4;	//fixed
 	g_auto_winder_slider.slider_pulse_per_mm = 160;	
 	g_auto_winder_slider.slider_ori_point_pulse = -500;
 	g_auto_winder_slider.slider_move_total_mm = 12.5;
-	g_auto_winder_slider.winder_line_width_inch = 0.0059; //0.0059~0.0258
+	g_auto_winder_slider.winder_line_width_inch = 0.0059; //0.0059~0.0258	
 	g_auto_winder_slider.winder_line_width_mm = g_auto_winder_slider.inch_to_mm * g_auto_winder_slider.winder_line_width_inch;
-	g_auto_winder_slider.slider_jog_pulse = (int)(g_auto_winder_slider.slider_move_total_mm/g_auto_winder_slider.winder_line_width_mm)*g_auto_winder_slider.slider_pulse_per_mm;
+	g_auto_winder_slider.slider_jog_pulse = (int)((float)g_auto_winder_slider.slider_pulse_per_mm *g_auto_winder_slider.winder_line_width_mm );
 	printf("slider_jog_pulse:%d\n",g_auto_winder_slider.slider_jog_pulse);
 	printf("winder_line_width_mm:%9.6f\n",g_auto_winder_slider.winder_line_width_mm);
 	printf("div:%9.6f\n",g_auto_winder_slider.slider_move_total_mm/g_auto_winder_slider.winder_line_width_mm);
