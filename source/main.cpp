@@ -95,6 +95,7 @@ int main(int argc, char *argv[])
 	res_usbpthread_init = USBComm_Driver_Init_Threads();
 	LECPA100moving_pthread_init();
 	Autowinder_Slider_Init();
+	Autowinder_Slider_ParamCal(12.5, 0.0258, 600);
 	if (res_libusb_init != 0 || res_usbpthread_init != 0)
 	{
 		printf("LIBUSB_init() or USB_Pthread_init() Fault\n");
@@ -120,6 +121,7 @@ int main(int argc, char *argv[])
 	iState = USBComm_Task_Terminate();
 	iState = USBComm_AutoReConnect_Terminate();
 	LECPA100moving_PthreadStop();
+	AutowinderSliderTask_PthreadStop();
 	ServerForHost.stop();
 	StopLoggerWrapper();
 	printf("BL_Driver finish program\n");

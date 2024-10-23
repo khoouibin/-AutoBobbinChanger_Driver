@@ -37,7 +37,7 @@ bool g_b_USBComm_Task_run = true;
 bool g_b_AutoReConnect_run = true;
 Poco::Event g_LECPA100moving_Idle,g_LECPA100moving_waitReady;
 // char BL_USB_WriteBuffer(void);
-autowinder_with_slider_t g_auto_winder_slider;
+autowinder_with_slider_t g_aws;
 
 int USBComm_Driver_Init_Threads(void)
 {
@@ -376,7 +376,7 @@ void *USBComm_Rx_Thread_Main_Abc(void *p)
 				goDriverLogger.Log("ERROR", tmp_string);
 				break;
 			}
-			usleep(500);
+			usleep(50);
 		}
 
 		res_closeHdl = USBComm_Driver_closeDeviceHandle();
@@ -590,6 +590,7 @@ void *USBComm_Task_Service_Abc(void *p)
 									p_zpulse_msg->turns);
 							string tmp_string(str_log);
 							goDriverLogger.Log("debug", tmp_string);
+							g_aws.winder_cycling_awake.set();
 						}
 					}
 					else if (Task_msg.cmd_id_rep == RespPositive_X_PulseGen)
@@ -674,13 +675,17 @@ void *USBComm_Task_Service_Abc(void *p)
 								g_LECPA100moving_waitReady.set();
 							}
 
-							sprintf(str_log, "%s[%d] Subf: %02x Svo=%s DState:%s DStage:%s", __func__, __LINE__,
-									p_lecpa_drive_cmd_reply->sub_func,
-									str_servo_state.c_str(),
-									str_drive_state.c_str(),
-									str_drive_stage.c_str());
-							string tmp_string(str_log);
-							goDriverLogger.Log("debug", tmp_string);
+							if ((u8_drive_state == 0) && (u8_drive_stage == 5))
+							{
+								g_aws.slider_jog_awake.set();
+							}
+							// sprintf(str_log, "%s[%d] Subf: %02x Svo=%s DState:%s DStage:%s", __func__, __LINE__,
+							// 		p_lecpa_drive_cmd_reply->sub_func,
+							// 		str_servo_state.c_str(),
+							// 		str_drive_state.c_str(),
+							// 		str_drive_stage.c_str());
+							// string tmp_string(str_log);
+							// goDriverLogger.Log("debug", tmp_string);
 						}
 						else if ((p_lecpa_drive_cmd_reply->sub_func == SubFunc_LECPA_Mov_OrgPoint) ||
 								 (p_lecpa_drive_cmd_reply->sub_func == SubFunc_LECPA_Mov_MinPoint) ||
@@ -1633,7 +1638,7 @@ int usb_message_LECPA_100_ControlCmd(int action,int any_point)
 		}
 		break;
 	}
-	printf("LECPA-100 control msg message, escape:%ld ms. \n", (GetCurrentTime_us() - t_start) / 1000);
+	//printf("LECPA-100 control msg message, escape:%ld ms. \n", (GetCurrentTime_us() - t_start) / 1000);
 	return res;
 }
 
@@ -1663,7 +1668,7 @@ void *LECPA100moving(void *p)
 		if (g_LECPA100movingThreadAlive == false)
 			break;
 
-		while(1)
+		while (1)
 		{
 			if (g_LECPA100moving == 1)
 			{
@@ -1693,7 +1698,7 @@ void *LECPA100moving(void *p)
 					g_LECPA100moving_waitReady.wait();
 					printf("LECPA100moving-case 2\n");
 					wait_ms.tryWait(1000);
-					g_LECPA100moving_pattern=0;
+					g_LECPA100moving_pattern = 0;
 					break;
 				}
 			}
@@ -1703,7 +1708,7 @@ void *LECPA100moving(void *p)
 				g_LECPA100moving_pattern = 0;
 				usb_message_LECPA_100_ControlCmd(SubFunc_LECPA_Mov_MinPoint);
 				break;
-			}			
+			}
 		}
 
 		// xyTab_ReadSpeedStart();
@@ -1723,8 +1728,8 @@ int LECPA100moving_pthread_init(void)
 	if (res != 0)
 	{
 		sprintf(str_log, "%s[%d] errno:%d, %s",
-					__func__, __LINE__,
-					res, strerror(res));
+				__func__, __LINE__,
+				res, strerror(res));
 		string tmp_string(str_log);
 		goDriverLogger.Log("info", tmp_string);
 	}
@@ -1738,27 +1743,155 @@ void LECPA100moving_PthreadStop()
 	g_LECPA100moving_Idle.set();
 }
 
+void AutowinderSliderGo()
+{
+	g_aws.winder_slider_go = true;
+	g_aws.autowinder_slider_task_awake.set();
+}
+
+void AutowinderSliderStop()
+{
+	g_aws.winder_slider_go = false;
+	g_aws.autowinder_slider_task_awake.set();
+}
+
+void AutowinderSliderTask_PthreadStop()
+{
+	g_aws.winder_slider_thread_alive = false;
+	g_aws.autowinder_slider_task_awake.set();
+}
+
+void AutowinderRpm(int rpm)
+{
+	g_aws.winder_rpm = rpm;
+	g_aws.winder_update_rpm = 1;
+}
+
 void *AutowinderSliderTask(void *p)
 {
 	(void)p;
 	Poco::Event wait_ms;
 	pthread_detach(pthread_self());
+	int slider_jog_index;
+	int slider_jog_dir, slider_move_pulse;
+	float f_slide_jog_inc;
+	int stopping_finished = 0;
 
-	printf("AutowinderSliderTask\n");
+	printf("AutowinderSliderTask-Start\n");
 
-	while (g_LECPA100movingThreadAlive)
+	while (g_aws.winder_slider_thread_alive == true)
 	{
-		g_auto_winder_slider.autowinder_slider_task_awake.wait();
-		printf("AutowinderSliderTask-1\n");
-	}
-	printf("AutowinderSliderTask-off\n");
+		g_aws.autowinder_slider_task_awake.wait();
+		stopping_finished = 0;
+		if (g_aws.winder_slider_thread_alive == false)
+			break;
 
+		while (1)
+		{
+			if (stopping_finished == 1)
+				break;
+
+			switch (g_aws.aws_procedure)
+			{
+			case slider_move_org_point:
+				if (g_aws.winder_slider_go == false)
+				{
+					g_aws.aws_procedure = stopping;
+					break;
+				}
+
+				slider_jog_index = 0;
+				slider_jog_dir = 0;
+				f_slide_jog_inc = 0;
+				usb_message_LECPA_100_ControlCmd(SubFunc_LECPA_Mov_AnyPoint, g_aws.s_ori_point_pulse);
+				g_aws.slider_jog_awake.reset();
+				g_aws.slider_jog_awake.wait();
+
+				if( g_aws.winder_running == false)
+					g_aws.aws_procedure = set_z_rpm;
+				else
+					g_aws.aws_procedure = move_slider;
+				break;
+
+			case set_z_rpm:
+				if (g_aws.winder_slider_go == false)
+				{
+					g_aws.aws_procedure = stopping;
+					break;
+				}
+
+				usb_message_set_z_pulse_gen(g_aws.winder_rpm);
+				printf("set_z_rpm---first\n");
+				g_aws.winder_cycling_awake.reset();
+				g_aws.winder_cycling_awake.wait();
+				g_aws.aws_procedure = move_slider;
+				g_aws.winder_running = true;
+				break;
+
+			case move_slider:
+				if (g_aws.winder_slider_go == false)
+				{
+					g_aws.aws_procedure = stopping;
+					break;
+				}
+				g_aws.winder_cycling_awake.wait();
+				printf("mov-slider cycling-awake\n");
+				if(g_aws.winder_update_rpm ==1)
+				{
+					usb_message_set_z_pulse_gen(g_aws.winder_rpm);
+					printf("set_z_rpm---update\n");
+					g_aws.winder_update_rpm = 0;
+				}
+
+				if (slider_jog_dir == 0)
+				{
+					f_slide_jog_inc += g_aws.s_each_jog_pulse;
+					slider_move_pulse = (int)f_slide_jog_inc + g_aws.s_ori_point_pulse;
+					usb_message_LECPA_100_ControlCmd(SubFunc_LECPA_Mov_AnyPoint, slider_move_pulse);
+					g_aws.slider_jog_awake.reset();
+					g_aws.slider_jog_awake.wait();
+
+					slider_jog_index += 1;
+					if (slider_jog_index >= g_aws.slider_jog_number)
+						slider_jog_dir = 1;
+				}
+				else
+				{
+					f_slide_jog_inc -= g_aws.s_each_jog_pulse;
+					slider_move_pulse = (int)f_slide_jog_inc + g_aws.s_ori_point_pulse;
+					usb_message_LECPA_100_ControlCmd(SubFunc_LECPA_Mov_AnyPoint, slider_move_pulse);
+					g_aws.slider_jog_awake.reset();
+					g_aws.slider_jog_awake.wait();
+
+					slider_jog_index--;
+					if (slider_jog_index == 0)
+						g_aws.aws_procedure = slider_move_org_point;
+				}
+				break;
+
+			case stopping:
+				usb_message_set_z_pulse_gen(0);
+				g_aws.winder_cycling_awake.reset();
+				g_aws.winder_cycling_awake.wait();
+
+				usb_message_LECPA_100_ControlCmd(SubFunc_LECPA_Mov_AnyPoint, g_aws.s_ori_point_pulse);
+				g_aws.slider_jog_awake.reset();
+				g_aws.slider_jog_awake.wait();
+				g_aws.aws_procedure = slider_move_org_point;
+				g_aws.winder_running = false;
+				stopping_finished = 1;
+				break;
+			}
+		}
+	}
+
+	printf("AutowinderSliderTask-off\n");
 	pthread_exit(NULL);
 }
 
 int Autowinder_Slider_Init(void)
 {
-	int res = pthread_create(&g_auto_winder_slider.winder_slider_thread, NULL, AutowinderSliderTask, NULL);
+	int res = pthread_create(&g_aws.winder_slider_thread, NULL, AutowinderSliderTask, NULL);
 	if (res != 0)
 	{
 		sprintf(str_log, "%s[%d] errno:%d, %s", __func__, __LINE__, res, strerror(res));
@@ -1766,31 +1899,41 @@ int Autowinder_Slider_Init(void)
 		goDriverLogger.Log("info", tmp_string);
 		return res;
 	}
-	g_auto_winder_slider.autowinder_slider_task_awake.reset();
-	g_auto_winder_slider.winder_slider_thread_alive = true;
+	g_aws.autowinder_slider_task_awake.reset();
+	g_aws.winder_slider_thread_alive = true;
+	g_aws.winder_slider_go = false;
+	g_aws.winder_running = false;
 
-	g_auto_winder_slider.inch_to_mm = 25.4;	//fixed
-	g_auto_winder_slider.slider_pulse_per_mm = 160;	
-	g_auto_winder_slider.slider_ori_point_pulse = -500;
-	g_auto_winder_slider.slider_move_total_mm = 12.5;
-	g_auto_winder_slider.winder_line_width_inch = 0.0059; //0.0059~0.0258	
-	g_auto_winder_slider.winder_line_width_mm = g_auto_winder_slider.inch_to_mm * g_auto_winder_slider.winder_line_width_inch;
-	g_auto_winder_slider.slider_jog_pulse = (int)((float)g_auto_winder_slider.slider_pulse_per_mm *g_auto_winder_slider.winder_line_width_mm );
-	printf("slider_jog_pulse:%d\n",g_auto_winder_slider.slider_jog_pulse);
-	printf("winder_line_width_mm:%9.6f\n",g_auto_winder_slider.winder_line_width_mm);
-	printf("div:%9.6f\n",g_auto_winder_slider.slider_move_total_mm/g_auto_winder_slider.winder_line_width_mm);
-	return res;
+	g_aws.inch_to_mm = 25.4; // fixed
+	g_aws.s_pulse_per_mm = 160;
+	g_aws.s_ori_point_pulse = 0;
+	g_aws.aws_procedure = slider_move_org_point;
+	return 0;
 }
-	// int slider_pulse_per_mm;
-	// int slider_ori_point_pulse;
-	// float inch_to_mm;	
-	// float slider_move_total_mm;
-	// float winder_line_width_inch;
-	// float winder_line_width_mm;
-	// int slider_jog_pulse;
-	// int slider_jog_dir; //dir=0-> right, dir=1->left.
-	// int winder_max_cycle_cnt_to_stop;
-	// int winder_rpm;
+
+int Autowinder_Slider_ParamCal(float slider_width_mm, float linewidth_inch, int winder_rpm)
+{
+	int i_jog_number;
+	float f_pulse_inc = 0;
+	g_aws.s_move_total_mm = slider_width_mm;
+	g_aws.w_linewidth_inch = linewidth_inch; // 0.0059~0.0258
+	g_aws.w_linewidth_mm = g_aws.inch_to_mm * g_aws.w_linewidth_inch;
+	g_aws.s_each_jog_pulse = ((float)g_aws.s_pulse_per_mm * g_aws.w_linewidth_mm);
+	i_jog_number = (int)((float)g_aws.s_pulse_per_mm * g_aws.s_move_total_mm / g_aws.s_each_jog_pulse);
+	g_aws.slider_jog_number = i_jog_number;
+	printf("f_s_each_jog_pulse:%9.6f\n", g_aws.s_each_jog_pulse);
+	printf("i_jog_number:%d\n", i_jog_number);
+
+	g_aws.winder_rpm = winder_rpm;
+	printf("winder_rpm:%d\n", g_aws.winder_rpm);
+	g_aws.winder_update_rpm = 0;
+	// for (int k=0;k<i_jog_number;k++)
+	// {
+	// 	f_pulse_inc+=g_aws.s_each_jog_pulse;
+	// 	printf("[%d] i_ f_pulse_inc %9.6f\n",k, f_pulse_inc);
+	// }
+	return 0;
+}
 
 bool USB_Msg_Parser(USB_TaskResp_msg_t *task_msg)
 {

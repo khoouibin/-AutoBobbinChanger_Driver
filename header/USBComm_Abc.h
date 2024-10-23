@@ -684,23 +684,36 @@ typedef struct
 } RTC_Profile_02_t;
 
 
+enum autowinder_procedure
+{
+	slider_move_org_point = 0,
+	set_z_rpm = 1,
+	move_slider = 2,
+	stopping = 3,
+};
+
 typedef struct
 {
 	pthread_t winder_slider_thread;
 	bool winder_slider_thread_alive;
+	bool winder_slider_go;
+	bool winder_running;
+	autowinder_procedure aws_procedure;
 	Poco::Event autowinder_slider_task_awake;
 	Poco::Event winder_cycling_awake;
 	Poco::Event slider_jog_awake;
-	int slider_pulse_per_mm;
-	int slider_ori_point_pulse;
+	int s_pulse_per_mm;
+	int s_ori_point_pulse;
 	float inch_to_mm;	
-	float slider_move_total_mm;
-	float winder_line_width_inch;
-	float winder_line_width_mm;
-	int slider_jog_pulse;
+	float s_move_total_mm;
+	float w_linewidth_inch;
+	float w_linewidth_mm;
+	float s_each_jog_pulse;
+	int slider_jog_number;
 	int slider_jog_dir; //dir=0-> right, dir=1->left.
 	int winder_max_cycle_cnt_to_stop;
 	int winder_rpm;
+	int winder_update_rpm;
 } autowinder_with_slider_t;
 
 
@@ -770,5 +783,9 @@ int LECPA100moving_pthread_init(void);
 void LECPA100moving_PthreadStop();
 
 int Autowinder_Slider_Init(void);
-
+void AutowinderSliderTask_PthreadStop();
+int Autowinder_Slider_ParamCal(float slider_width_mm, float linewidth_inch, int winder_rpm);
+void AutowinderSliderStop();
+void AutowinderSliderGo();
+void AutowinderRpm(int rpm);
 #endif

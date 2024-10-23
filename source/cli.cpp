@@ -520,11 +520,45 @@ void CommandLineInterface()
         {
             LECPA100stop();
         }
-
-        // else if (cmd == "l100-any")
-        // {
-        //     usb_message_LECPA_100_ControlCmd(SubFunc_LECPA_Mov_AnyPoint);
-        // }
+        else if (cmd == "aws-paras")
+        {
+            if (v.size() >= 3)
+            {
+                try
+                {
+                    float slider_width_mm = std::stof(v[1]);
+                    float line_width_inch = std::stof(v[2]);
+                    Autowinder_Slider_ParamCal(slider_width_mm, line_width_inch, 600);
+                }
+                catch (const std::exception &e)
+                {
+                    std::cout << "echo message, exception:" << e.what() << '\n';
+                }
+            }
+        }
+        else if (cmd == "go")
+        {
+            AutowinderSliderGo();
+        }
+        else if (cmd == "sp")
+        {
+            AutowinderSliderStop();
+        }
+        else if (cmd == "rpm")
+        {
+            if (v.size() >= 2)
+            {
+                try
+                {
+                    int rpm = std::stoi(v[1]);
+                    AutowinderRpm(rpm);
+                }
+                catch (const std::exception &e)
+                {
+                    std::cout << "echo message, exception:" << e.what() << '\n';
+                }
+            }
+        }
         else if (cmd == "tcp")
         {
             int res;
